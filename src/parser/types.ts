@@ -6,6 +6,8 @@ export interface QueryNode {
   where?: WhereClause[];
   joins?: JoinClause[];
   orderBy?: OrderByClause[];
+  groupBy?: string[];
+  having?: HavingClause[];
   limit?: number;
   offset?: number;
   single?: boolean;
@@ -14,7 +16,7 @@ export interface QueryNode {
 
 export interface WhereClause {
   column: string;
-  operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'ilike' | 'in' | 'not' | 'contains' | 'or';
+  operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'ilike' | 'in' | 'not' | 'contains' | 'or' | 'textSearch' | 'fullTextSearch' | 'rangeGt' | 'rangeGte' | 'rangeLt' | 'rangeLte' | 'range';
   value: any;
   logicalOperator?: 'AND' | 'OR';
 }
@@ -30,9 +32,15 @@ export interface OrderByClause {
   direction: 'ASC' | 'DESC';
 }
 
+export interface HavingClause {
+  column: string;
+  operator: string;
+  value: any;
+}
+
 export interface ParsedQuery {
   original: string;
-  sql: string;
+  sql?: string;
   error?: string;
   warnings?: string[];
 }

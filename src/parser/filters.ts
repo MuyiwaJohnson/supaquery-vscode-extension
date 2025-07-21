@@ -204,16 +204,27 @@ export class FilterParser {
       'ilike': 'ILIKE',
       'in': 'IN',
       'not': 'NOT',
-      'contains': '@>'
+      'contains': '@>',
+      'textSearch': 'to_tsvector',
+      'fullTextSearch': 'to_tsvector',
+      'rangeGt': '>',
+      'rangeGte': '>=',
+      'rangeLt': '<',
+      'rangeLte': '<=',
+      'range': 'BETWEEN'
     };
     
     return operatorMap[operator] || operator;
   }
 
   private formatValue(value: any): string {
-    if (value === null) return 'NULL';
+    if (value === null) return 'IS NULL';
     if (value === 'auth.uid()') return 'auth.uid()';
-    if (typeof value === 'string') return `'${value.replace(/'/g, "''")}'`;
+    if (typeof value === 'string') {
+      // Handle apostrophes by escaping them properly
+      const escapedValue = value.replace(/'/g, "''");
+      return `'${escapedValue}'`;
+    }
     if (typeof value === 'object') return `'${JSON.stringify(value)}'`;
     return String(value);
   }

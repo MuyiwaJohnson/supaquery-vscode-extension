@@ -46,6 +46,20 @@ export class SqlGenerator {
       sql += ` WHERE ${whereClause}`;
     }
     
+    // Add GROUP BY
+    if (queryNode.groupBy && queryNode.groupBy.length > 0) {
+      const groupByClause = queryNode.groupBy.join(', ');
+      sql += ` GROUP BY ${groupByClause}`;
+    }
+    
+    // Add HAVING clause
+    if (queryNode.having && queryNode.having.length > 0) {
+      const havingClause = queryNode.having
+        .map(having => `${having.column} ${having.operator} ${this.formatValue(having.value)}`)
+        .join(' AND ');
+      sql += ` HAVING ${havingClause}`;
+    }
+    
     // Add ORDER BY
     if (queryNode.orderBy && queryNode.orderBy.length > 0) {
       const orderByClause = queryNode.orderBy
@@ -87,7 +101,15 @@ export class SqlGenerator {
       `(${columns.map(() => '?').join(', ')})`
     ).join(', ');
     
-    return `INSERT INTO ${queryNode.table} (${columnList}) VALUES ${valuePlaceholders}`;
+    let sql = `INSERT INTO ${queryNode.table} (${columnList}) VALUES ${valuePlaceholders}`;
+    
+    // Add RETURNING clause if select is specified
+    if (queryNode.columns && queryNode.columns.length > 0) {
+      const returningColumns = queryNode.columns.join(', ');
+      sql += ` RETURNING ${returningColumns}`;
+    }
+    
+    return sql;
   }
 
   private generateUpdateSql(queryNode: QueryNode): string {
@@ -189,5 +211,13 @@ export class SqlGenerator {
       .map(line => line.trim())
       .filter(line => line.length > 0)
       .join('\n');
+  }
+
+  private formatValue(value: any): string {
+    if (value === null) return 'NULL';
+    if (value === 'auth.uid()') return 'auth.uid()';
+    if (typeof value === 'string') return `'${value.replace(/'/g, "''")}'`;
+    if (typeof value === 'object') return `'${JSON.stringify(value)}'`;
+    return String(value);
   }
 } 

@@ -131,6 +131,11 @@ export class AstParser {
         const name = propAssignment.getNameNode().getText().replace(/['"]/g, '');
         const value = this.parseArgument(propAssignment.getInitializer()!);
         result[name] = value;
+      } else if (property.getKind() === SyntaxKind.ShorthandPropertyAssignment) {
+        // Handle shorthand properties like { member_id } which is equivalent to { member_id: member_id }
+        const shorthandProp = property.asKind(SyntaxKind.ShorthandPropertyAssignment)!;
+        const name = shorthandProp.getNameNode().getText();
+        result[name] = name; // Use the name as the value for shorthand properties
       }
     });
     

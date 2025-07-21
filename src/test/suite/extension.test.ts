@@ -14,8 +14,8 @@ suite('Supasense Extension Test Suite', () => {
     const result = parser.parseComplexQuery(query);
     
     assert.strictEqual(result.error, undefined);
-    assert.ok(result.sql.includes('SELECT'));
-    assert.ok(result.sql.includes('FROM users'));
+    assert.ok(result.sql?.includes('SELECT'));
+    assert.ok(result.sql?.includes('FROM users'));
   });
 
   test('Should parse insert query', () => {
@@ -23,8 +23,8 @@ suite('Supasense Extension Test Suite', () => {
     const result = parser.parseComplexQuery(query);
     
     assert.strictEqual(result.error, undefined);
-    assert.ok(result.sql.includes('INSERT INTO'));
-    assert.ok(result.sql.includes('users'));
+    assert.ok(result.sql?.includes('INSERT INTO'));
+    assert.ok(result.sql?.includes('users'));
   });
 
   test('Should parse update query', () => {
@@ -32,8 +32,8 @@ suite('Supasense Extension Test Suite', () => {
     const result = parser.parseComplexQuery(query);
     
     assert.strictEqual(result.error, undefined);
-    assert.ok(result.sql.includes('UPDATE'));
-    assert.ok(result.sql.includes('SET'));
+    assert.ok(result.sql?.includes('UPDATE'));
+    assert.ok(result.sql?.includes('SET'));
   });
 
   test('Should parse delete query', () => {
@@ -41,7 +41,7 @@ suite('Supasense Extension Test Suite', () => {
     const result = parser.parseComplexQuery(query);
     
     assert.strictEqual(result.error, undefined);
-    assert.ok(result.sql.includes('DELETE FROM'));
+    assert.ok(result.sql?.includes('DELETE FROM'));
   });
 
   test('Should parse upsert query', () => {
@@ -49,8 +49,8 @@ suite('Supasense Extension Test Suite', () => {
     const result = parser.parseComplexQuery(query);
     
     assert.strictEqual(result.error, undefined);
-    assert.ok(result.sql.includes('INSERT INTO'));
-    assert.ok(result.sql.includes('ON CONFLICT'));
+    assert.ok(result.sql?.includes('INSERT INTO'));
+    assert.ok(result.sql?.includes('ON CONFLICT'));
   });
 
   test('Should parse OR clause', () => {
@@ -58,7 +58,7 @@ suite('Supasense Extension Test Suite', () => {
     const result = parser.parseComplexQuery(query);
     
     assert.strictEqual(result.error, undefined);
-    assert.ok(result.sql.includes('OR'));
+    assert.ok(result.sql?.includes('OR'));
   });
 
   test('Should parse NOT clause', () => {
@@ -66,7 +66,7 @@ suite('Supasense Extension Test Suite', () => {
     const result = parser.parseComplexQuery(query);
     
     assert.strictEqual(result.error, undefined);
-    assert.ok(result.sql.includes('NOT'));
+    assert.ok(result.sql?.includes('NOT'));
   });
 
   test('Should parse IN clause', () => {
@@ -74,7 +74,7 @@ suite('Supasense Extension Test Suite', () => {
     const result = parser.parseComplexQuery(query);
     
     assert.strictEqual(result.error, undefined);
-    assert.ok(result.sql.includes('IN'));
+    assert.ok(result.sql?.includes('IN'));
   });
 
   test('Should parse CONTAINS clause', () => {
@@ -82,7 +82,7 @@ suite('Supasense Extension Test Suite', () => {
     const result = parser.parseComplexQuery(query);
     
     assert.strictEqual(result.error, undefined);
-    assert.ok(result.sql.includes('@>'));
+    assert.ok(result.sql?.includes('@>'));
   });
 
   test('Should parse relationship query', () => {
@@ -90,7 +90,7 @@ suite('Supasense Extension Test Suite', () => {
     const result = parser.parseComplexQuery(query);
     
     assert.strictEqual(result.error, undefined);
-    assert.ok(result.sql.includes('JOIN'));
+    assert.ok(result.sql?.includes('JOIN'));
   });
 
   test('Should parse auth query', () => {
@@ -98,7 +98,7 @@ suite('Supasense Extension Test Suite', () => {
     const result = parser.parseComplexQuery(query);
     
     assert.strictEqual(result.error, undefined);
-    assert.ok(result.sql.includes('auth.uid()'));
+    assert.ok(result.sql?.includes('auth.uid()'));
   });
 
   test('Should parse complex multi-line query', () => {
@@ -110,9 +110,9 @@ suite('Supasense Extension Test Suite', () => {
     const result = parser.parseComplexQuery(query);
     
     assert.strictEqual(result.error, undefined);
-    assert.ok(result.sql.includes('SELECT'));
-    assert.ok(result.sql.includes('WHERE'));
-    assert.ok(result.sql.includes('LIMIT'));
+    assert.ok(result.sql?.includes('SELECT'));
+    assert.ok(result.sql?.includes('WHERE'));
+    assert.ok(result.sql?.includes('LIMIT'));
   });
 
   test('Should handle invalid query gracefully', () => {

@@ -63,6 +63,19 @@ export class QueryVisitor {
       case 'single':
       case 'maybeSingle':
         return this.visitSingleCall(methodName, args);
+      case 'group':
+        return this.visitGroupCall(args);
+      case 'having':
+        return this.visitHavingCall(args);
+      case 'textSearch':
+        return this.visitTextSearchCall(args);
+      case 'fullTextSearch':
+        return this.visitFullTextSearchCall(args);
+      case 'rangeGt':
+      case 'rangeGte':
+      case 'rangeLt':
+      case 'rangeLte':
+        return this.visitRangeCall(methodName, args);
       default:
         throw new Error(`Unsupported method: ${methodName}`);
     }
@@ -82,6 +95,16 @@ export class QueryVisitor {
   private visitSelectCall(args: any[]): QueryNode {
     // Handle select() without arguments - default to selecting all columns
     const selectArg = args.length > 0 ? this.extractStringValue(args[0]) : '*';
+    
+    // Handle special aggregation cases
+    if (selectArg === 'count') {
+      return {
+        type: 'select',
+        table: this.context.currentTable,
+        columns: ['COUNT(*)']
+      };
+    }
+    
     const { columns, joins } = this.joinParser.parseSelectWithJoins(selectArg);
     
     return {
@@ -295,17 +318,134 @@ export class QueryVisitor {
   }
 
   private mergeQueryNodes(base: QueryNode, addition: QueryNode): QueryNode {
+    // Special handling for INSERT + SELECT combination
+    if (base.type === 'insert' && addition.type === 'select') {
+      return {
+        ...base,
+        columns: addition.columns || ['*'], // Use SELECT columns as RETURNING columns
+        where: [...(base.where || []), ...(addition.where || [])],
+        joins: [...(base.joins || []), ...(addition.joins || [])],
+        orderBy: [...(base.orderBy || []), ...(addition.orderBy || [])],
+        groupBy: [...(base.groupBy || []), ...(addition.groupBy || [])],
+        having: [...(base.having || []), ...(addition.having || [])],
+        limit: addition.limit || base.limit,
+        offset: addition.offset || base.offset,
+        single: addition.single || base.single,
+        maybeSingle: addition.maybeSingle || base.maybeSingle
+      };
+    }
+
+    // Merge WHERE clauses with proper logical operators
+    const mergedWhere = [...(base.where || [])];
+    if (addition.where && addition.where.length > 0) {
+      // If base has WHERE clauses, the first addition should use AND
+      if (mergedWhere.length > 0) {
+        addition.where[0].logicalOperator = 'AND';
+      }
+      mergedWhere.push(...addition.where);
+    }
+
     return {
       ...base,
       columns: addition.columns || base.columns,
       values: addition.values || base.values,
-      where: [...(base.where || []), ...(addition.where || [])],
+      where: mergedWhere,
       joins: [...(base.joins || []), ...(addition.joins || [])],
       orderBy: [...(base.orderBy || []), ...(addition.orderBy || [])],
+      groupBy: [...(base.groupBy || []), ...(addition.groupBy || [])],
+      having: [...(base.having || []), ...(addition.having || [])],
       limit: addition.limit || base.limit,
       offset: addition.offset || base.offset,
       single: addition.single || base.single,
       maybeSingle: addition.maybeSingle || base.maybeSingle
+    };
+  }
+
+  private visitGroupCall(args: any[]): QueryNode {
+    const groupBy = this.extractStringValue(args[0]);
+    return {
+      type: 'select',
+      table: this.context.currentTable,
+      groupBy: [groupBy]
+    };
+  }
+
+  private visitHavingCall(args: any[]): QueryNode {
+    const column = this.extractStringValue(args[0]);
+    const operator = this.extractStringValue(args[1]);
+    const value = this.extractValue(args[2]);
+    
+    return {
+      type: 'select',
+      table: this.context.currentTable,
+      having: [{
+        column,
+        operator,
+        value
+      }]
+    };
+  }
+
+  private visitTextSearchCall(args: any[]): QueryNode {
+    const column = this.extractStringValue(args[0]);
+    const searchTerm = this.extractStringValue(args[1]);
+    
+    return {
+      type: 'select',
+      table: this.context.currentTable,
+      where: [{
+        column,
+        operator: 'textSearch',
+        value: searchTerm
+      }]
+    };
+  }
+
+  private visitFullTextSearchCall(args: any[]): QueryNode {
+    const column = this.extractStringValue(args[0]);
+    const searchTerm = this.extractStringValue(args[1]);
+    
+    return {
+      type: 'select',
+      table: this.context.currentTable,
+      where: [{
+        column,
+        operator: 'fullTextSearch',
+        value: searchTerm
+      }]
+    };
+  }
+
+  private visitRangeCall(methodName: string, args: any[]): QueryNode {
+    const column = this.extractStringValue(args[0]);
+    const value = this.extractValue(args[1]);
+    
+    let operator: 'rangeGt' | 'rangeGte' | 'rangeLt' | 'rangeLte' | 'range';
+    switch (methodName) {
+      case 'rangeGt':
+        operator = 'rangeGt';
+        break;
+      case 'rangeGte':
+        operator = 'rangeGte';
+        break;
+      case 'rangeLt':
+        operator = 'rangeLt';
+        break;
+      case 'rangeLte':
+        operator = 'rangeLte';
+        break;
+      default:
+        operator = 'range';
+    }
+    
+    return {
+      type: 'select',
+      table: this.context.currentTable,
+      where: [{
+        column,
+        operator,
+        value
+      }]
     };
   }
 
