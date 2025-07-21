@@ -1,0 +1,76 @@
+{
+  "name": "supabase-query-translator",
+  "displayName": "Supabase Query Translator",
+  "description": "Translate Supabase JavaScript queries to SQL in real-time",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:javascript",
+    "onLanguage:typescript"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "supabase-query-translator.translateQuery",
+        "title": "Translate Supabase Query to SQL",
+        "category": "Supabase Query Translator"
+      },
+      {
+        "command": "supabase-query-translator.showHover",
+        "title": "Show SQL Translation",
+        "category": "Supabase Query Translator"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "supabase-query-translator.translateQuery",
+        "key": "ctrl+shift+t",
+        "mac": "cmd+shift+t"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "supabase-query-translator.translateQuery",
+          "group": "navigation",
+          "when": "editorLangId == javascript || editorLangId == typescript"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "test:unit": "mocha --require ts-node/register 'src/test/unit/**/*.test.ts'",
+    "test:integration": "node ./out/test/runTest.js",
+    "test:all": "npm run test:unit && npm run test:integration"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0",
+    "@vscode/test-electron": "^2.3.8",
+    "mocha": "^10.2.0",
+    "@types/mocha": "^10.0.1",
+    "chai": "^4.3.7",
+    "@types/chai": "^4.3.5",
+    "ts-node": "^10.9.1"
+  },
+  "dependencies": {
+    "knex": "^3.0.0",
+    "ts-morph": "^21.0.1"
+  }
+} 
