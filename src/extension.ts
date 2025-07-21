@@ -55,7 +55,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
   
   // Register command for translating selected query
-  const translateCommand = vscode.commands.registerCommand('supasense.translateQuery', () => {
+  const translateCommand = vscode.commands.registerCommand('supabase-query-translator.translateQuery', () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
       vscode.window.showWarningMessage('No active editor found');
@@ -103,7 +103,7 @@ export function activate(context: vscode.ExtensionContext) {
   });
   
   // Register command for showing SQL in status bar
-  const showHoverCommand = vscode.commands.registerCommand('supasense.showHover', () => {
+  const showHoverCommand = vscode.commands.registerCommand('supabase-query-translator.showHover', () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) return;
     
