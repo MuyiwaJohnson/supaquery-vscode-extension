@@ -13,6 +13,7 @@ build/
 # TypeScript
 *.ts
 !*.d.ts
+!src/**/*.ts
 
 # VS Code
 .vscode-test/
