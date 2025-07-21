@@ -1,4 +1,4 @@
-import { JoinClause, QueryNode, ParserContext } from './types';
+import { JoinClause, ParserContext } from './types';
 
 export class JoinParser {
   private context: ParserContext;
