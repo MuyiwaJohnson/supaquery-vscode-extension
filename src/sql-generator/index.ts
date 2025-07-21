@@ -130,6 +130,12 @@ export class SqlGenerator {
       sql += ` WHERE ${whereClause}`;
     }
     
+    // Add RETURNING clause if select is specified
+    if (queryNode.columns && queryNode.columns.length > 0) {
+      const returningColumns = queryNode.columns.join(', ');
+      sql += ` RETURNING ${returningColumns}`;
+    }
+    
     return sql;
   }
 
@@ -140,6 +146,12 @@ export class SqlGenerator {
     if (queryNode.where && queryNode.where.length > 0) {
       const whereClause = this.filterParser.buildWhereClause(queryNode.where);
       sql += ` WHERE ${whereClause}`;
+    }
+    
+    // Add RETURNING clause if select is specified
+    if (queryNode.columns && queryNode.columns.length > 0) {
+      const returningColumns = queryNode.columns.join(', ');
+      sql += ` RETURNING ${returningColumns}`;
     }
     
     return sql;

@@ -25,6 +25,26 @@
         "command": "supabase-query-translator.showHover",
         "title": "Show SQL Translation",
         "category": "Supabase Query Translator"
+      },
+      {
+        "command": "supabase-query-translator.translateToHttp",
+        "title": "Translate to HTTP Request",
+        "category": "Supabase Query Translator"
+      },
+      {
+        "command": "supabase-query-translator.translateToCurl",
+        "title": "Translate to cURL Command",
+        "category": "Supabase Query Translator"
+      },
+      {
+        "command": "supabase-query-translator.roundTrip",
+        "title": "Round-trip Translation (Supabase JS → SQL → Supabase JS)",
+        "category": "Supabase Query Translator"
+      },
+      {
+        "command": "supabase-query-translator.fullTranslation",
+        "title": "Full Translation (All Formats)",
+        "category": "Supabase Query Translator"
       }
     ],
     "keybindings": [
@@ -32,6 +52,26 @@
         "command": "supabase-query-translator.translateQuery",
         "key": "ctrl+shift+t",
         "mac": "cmd+shift+t"
+      },
+      {
+        "command": "supabase-query-translator.translateToHttp",
+        "key": "ctrl+shift+h",
+        "mac": "cmd+shift+h"
+      },
+      {
+        "command": "supabase-query-translator.translateToCurl",
+        "key": "ctrl+shift+c",
+        "mac": "cmd+shift+c"
+      },
+      {
+        "command": "supabase-query-translator.roundTrip",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r"
+      },
+      {
+        "command": "supabase-query-translator.fullTranslation",
+        "key": "ctrl+shift+f",
+        "mac": "cmd+shift+f"
       }
     ],
     "menus": {
@@ -56,21 +96,22 @@
     "test:all": "npm run test:unit && npm run test:integration"
   },
   "devDependencies": {
-    "@types/vscode": "^1.74.0",
+    "@types/chai": "^4.3.5",
+    "@types/mocha": "^10.0.1",
     "@types/node": "16.x",
+    "@types/vscode": "^1.74.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
-    "eslint": "^8.0.0",
-    "typescript": "^5.0.0",
     "@vscode/test-electron": "^2.3.8",
-    "mocha": "^10.2.0",
-    "@types/mocha": "^10.0.1",
     "chai": "^4.3.7",
-    "@types/chai": "^4.3.5",
-    "ts-node": "^10.9.1"
+    "eslint": "^8.0.0",
+    "mocha": "^10.2.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@supabase/sql-to-rest": "^0.1.8",
     "knex": "^3.0.0",
     "ts-morph": "^21.0.1"
   }
-} 
+}

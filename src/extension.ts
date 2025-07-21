@@ -1,8 +1,10 @@
 import * as vscode from 'vscode';
 import { SupabaseQueryParser } from './parser';
+import { EnhancedTranslator } from './enhanced-translator';
 
 export function activate(context: vscode.ExtensionContext) {
   const parser = new SupabaseQueryParser();
+  const enhancedTranslator = new EnhancedTranslator();
   
   // Register hover provider for SQL translation......
   const hoverProvider = vscode.languages.registerHoverProvider(
@@ -132,6 +134,202 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }
   });
+
+  // Register enhanced translation commands
+  const translateToHttpCommand = vscode.commands.registerCommand('supabase-query-translator.translateToHttp', async () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showWarningMessage('No active editor found');
+      return;
+    }
+    
+    const selection = editor.selection;
+    const selectedText = editor.document.getText(selection);
+    
+    if (!selectedText.trim()) {
+      vscode.window.showWarningMessage('Please select a Supabase query to translate');
+      return;
+    }
+    
+    try {
+      const result = await enhancedTranslator.translateToHttp(selectedText);
+      
+      if (result.error) {
+        vscode.window.showErrorMessage(`Translation failed: ${result.error}`);
+        return;
+      }
+      
+      if (result.http) {
+        const httpContent = `HTTP Request:
+Method: ${result.http.method}
+Path: ${result.http.path}
+Full URL: ${result.http.fullPath}
+        Parameters: ${Array.from(result.http.params.entries()).map((entry: [string, string]) => `${entry[0]}=${entry[1]}`).join('&')}`;
+        
+        const httpDocument = vscode.workspace.openTextDocument({
+          content: httpContent,
+          language: 'http'
+        });
+        
+        httpDocument.then(doc => {
+          vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+        });
+      }
+      
+    } catch (error) {
+      vscode.window.showErrorMessage(
+        `Failed to translate to HTTP: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  });
+
+  const translateToCurlCommand = vscode.commands.registerCommand('supabase-query-translator.translateToCurl', async () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showWarningMessage('No active editor found');
+      return;
+    }
+    
+    const selection = editor.selection;
+    const selectedText = editor.document.getText(selection);
+    
+    if (!selectedText.trim()) {
+      vscode.window.showWarningMessage('Please select a Supabase query to translate');
+      return;
+    }
+    
+    try {
+      const result = await enhancedTranslator.translateToCurl(selectedText);
+      
+      if (result.error) {
+        vscode.window.showErrorMessage(`Translation failed: ${result.error}`);
+        return;
+      }
+      
+      if (result.curl) {
+        const curlDocument = vscode.workspace.openTextDocument({
+          content: result.curl,
+          language: 'shellscript'
+        });
+        
+        curlDocument.then(doc => {
+          vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+        });
+      }
+      
+    } catch (error) {
+      vscode.window.showErrorMessage(
+        `Failed to translate to cURL: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  });
+
+  const roundTripCommand = vscode.commands.registerCommand('supabase-query-translator.roundTrip', async () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showWarningMessage('No active editor found');
+      return;
+    }
+    
+    const selection = editor.selection;
+    const selectedText = editor.document.getText(selection);
+    
+    if (!selectedText.trim()) {
+      vscode.window.showWarningMessage('Please select a Supabase query to translate');
+      return;
+    }
+    
+    try {
+      const result = await enhancedTranslator.roundTripTranslation(selectedText);
+      
+      if (result.error) {
+        vscode.window.showErrorMessage(`Translation failed: ${result.error}`);
+        return;
+      }
+      
+      if (result.supabaseJs) {
+        const comparisonContent = `Original Supabase JS:
+${selectedText}
+
+Generated SQL:
+${result.sql}
+
+Round-trip Supabase JS:
+${result.supabaseJs}`;
+        
+        const comparisonDocument = vscode.workspace.openTextDocument({
+          content: comparisonContent,
+          language: 'javascript'
+        });
+        
+        comparisonDocument.then(doc => {
+          vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+        });
+      }
+      
+    } catch (error) {
+      vscode.window.showErrorMessage(
+        `Failed to perform round-trip translation: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  });
+
+  const fullTranslationCommand = vscode.commands.registerCommand('supabase-query-translator.fullTranslation', async () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showWarningMessage('No active editor found');
+      return;
+    }
+    
+    const selection = editor.selection;
+    const selectedText = editor.document.getText(selection);
+    
+    if (!selectedText.trim()) {
+      vscode.window.showWarningMessage('Please select a Supabase query to translate');
+      return;
+    }
+    
+    try {
+      const result = await enhancedTranslator.fullTranslation(selectedText);
+      
+      if (result.error) {
+        vscode.window.showErrorMessage(`Translation failed: ${result.error}`);
+        return;
+      }
+      
+      const fullContent = `Original Supabase JS:
+${selectedText}
+
+Generated SQL:
+${result.sql}
+
+HTTP Request:
+${result.http ? `Method: ${result.http.method}
+Path: ${result.http.path}
+Full URL: ${result.http.fullPath}
+Parameters: ${Array.from(result.http.params.entries()).map((entry: [string, string]) => `${entry[0]}=${entry[1]}`).join('&')}` : 'N/A'}
+
+cURL Command:
+${result.curl || 'N/A'}
+
+Round-trip Supabase JS:
+${result.supabaseJs || 'N/A'}`;
+        
+      const fullDocument = vscode.workspace.openTextDocument({
+        content: fullContent,
+        language: 'markdown'
+      });
+      
+      fullDocument.then(doc => {
+        vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+      });
+      
+    } catch (error) {
+      vscode.window.showErrorMessage(
+        `Failed to perform full translation: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  });
   
   // Register code actions for quick fixes
   const codeActionProvider = vscode.languages.registerCodeActionsProvider(
@@ -229,6 +427,10 @@ export function activate(context: vscode.ExtensionContext) {
     hoverProvider,
     translateCommand,
     showHoverCommand,
+    translateToHttpCommand,
+    translateToCurlCommand,
+    roundTripCommand,
+    fullTranslationCommand,
     codeActionProvider,
     configChangeListener,
     documentChangeListener

@@ -1,23 +1,29 @@
-# Supasense: Supabase Query Translator
+# Supabase Query Translator
 
-A powerful VS Code extension that translates Supabase JavaScript queries to SQL in real-time, helping developers understand and optimize their database operations.
+A powerful VS Code extension that translates Supabase JavaScript queries to SQL, HTTP requests, cURL commands, and back to Supabase JS code in real-time, helping developers understand and optimize their database operations.
 
-## Features
+## 🚀 Features
 
-### 🚀 Real-time Translation
+### Real-time Translation
 - **Hover Support**: Hover over any Supabase query to see the equivalent SQL
 - **Command Palette**: Use `Ctrl+Shift+T` to translate selected queries
 - **Real-time Updates**: See SQL translations as you type (configurable)
 
+### 🌐 Enhanced Translation Pipeline
+- **HTTP Translation**: Convert queries to PostgREST HTTP requests (`Ctrl+Shift+H`)
+- **cURL Commands**: Generate executable cURL commands (`Ctrl+Shift+C`)
+- **Round-trip Translation**: Supabase JS → SQL → Supabase JS (`Ctrl+Shift+R`)
+- **Full Translation**: All formats in one command (`Ctrl+Shift+F`)
+
 ### 📊 Comprehensive Query Coverage
 
-#### CRUD Operations
-| JavaScript | SQL Equivalent |
-|------------|----------------|
-| `.insert()` | `INSERT INTO ...` |
-| `.update()` | `UPDATE ... SET ...` |
-| `.delete()` | `DELETE FROM ...` |
-| `.upsert()` | `INSERT ... ON CONFLICT` |
+#### CRUD Operations (ALL Supported!)
+| JavaScript | SQL Equivalent | HTTP Method | cURL Command |
+|------------|----------------|-------------|--------------|
+| `.insert()` | `INSERT INTO ...` | `POST` | `curl -X POST` |
+| `.update()` | `UPDATE ... SET ...` | `PATCH` | `curl -X PATCH` |
+| `.delete()` | `DELETE FROM ...` | `DELETE` | `curl -X DELETE` |
+| `.upsert()` | `INSERT ... ON CONFLICT` | `POST` | `curl -X POST` |
 
 #### Advanced Filtering
 | JavaScript | SQL Equivalent |
@@ -26,6 +32,9 @@ A powerful VS Code extension that translates Supabase JavaScript queries to SQL 
 | `.not()` | `WHERE NOT ...` |
 | `.in()` | `WHERE id IN (1,2,3)` |
 | `.contains()` | `WHERE data @> '{"k":"v"}'` |
+| `.textSearch()` | `WHERE to_tsvector(...)` |
+| `.fullTextSearch()` | `WHERE to_tsvector(...)` |
+| `.rangeGt()`, `.rangeLt()` | `WHERE column >/</>=/<= value` |
 
 #### Joins & Relationships
 ```javascript
@@ -46,6 +55,61 @@ WHERE posts.published = true;
 - Supports admin bypass queries
 - RLS policy awareness
 
+### 🔄 Translation Examples
+
+#### Supabase JS → HTTP (ALL Operations!)
+```javascript
+// SELECT Query
+supabase.from('users').select('id, name').eq('status', 'active')
+// Output: GET /rest/v1/users?select=id,name&status=eq.active
+
+// INSERT Query
+supabase.from('users').insert({name: 'John', email: 'john@example.com'})
+// Output: POST /rest/v1/users with JSON body
+
+// UPDATE Query
+supabase.from('users').eq('id', 1).update({name: 'Jane'}).select('id, name')
+// Output: PATCH /rest/v1/users?id=eq.1&select=id,name with JSON body
+
+// DELETE Query
+supabase.from('users').eq('id', 1).delete().select('id')
+// Output: DELETE /rest/v1/users?id=eq.1&select=id
+```
+
+#### Supabase JS → cURL (ALL Operations!)
+```javascript
+// SELECT Query
+supabase.from('books').select('title, author').order('title')
+// Output: curl -G http://localhost:54321/rest/v1/books -d "select=title,author" -d "order=title.asc"
+
+// INSERT Query
+supabase.from('users').insert({name: 'John', email: 'john@example.com'})
+// Output: curl -X POST "http://localhost:54321/rest/v1/users" -H "Content-Type: application/json" -d '{"name":"John","email":"john@example.com"}'
+
+// UPDATE Query
+supabase.from('users').eq('id', 1).update({name: 'Jane'})
+// Output: curl -X PATCH "http://localhost:54321/rest/v1/users?id=eq.1" -H "Content-Type: application/json" -d '{"name":"Jane"}'
+
+// DELETE Query
+supabase.from('users').eq('id', 1).delete()
+// Output: curl -X DELETE "http://localhost:54321/rest/v1/users?id=eq.1"
+```
+
+#### Round-trip Translation
+```javascript
+// Original
+supabase.from('users').select('id, name').eq('status', 'active')
+
+// Generated SQL
+SELECT id, name FROM users WHERE status = 'active'
+
+// Round-trip Supabase JS
+const { data, error } = await supabase
+  .from('users')
+  .select('id, name')
+  .eq('status', 'active')
+```
+
 ### 🛠️ Advanced Features
 
 - **JSONB Support**: Full support for PostgreSQL JSONB operations
@@ -54,6 +118,17 @@ WHERE posts.published = true;
 - **Performance Warnings**: Get alerts for potential performance issues
 - **Error Boundaries**: Graceful error handling with helpful messages
 - **AST Parsing**: Uses ts-morph for accurate TypeScript/JavaScript parsing
+- **Edge Case Handling**: Robust handling of malformed queries, special characters, and complex scenarios
+
+## 🎯 VS Code Commands
+
+| Command | Shortcut | Description |
+|---------|----------|-------------|
+| `Translate Supabase Query to SQL` | `Ctrl+Shift+T` | Convert selected query to SQL |
+| `Translate to HTTP Request` | `Ctrl+Shift+H` | Convert to PostgREST HTTP request |
+| `Translate to cURL Command` | `Ctrl+Shift+C` | Generate executable cURL command |
+| `Round-trip Translation` | `Ctrl+Shift+R` | Supabase JS → SQL → Supabase JS |
+| `Full Translation (All Formats)` | `Ctrl+Shift+F` | Generate all translation formats |
 
 ## Installation
 
@@ -125,15 +200,26 @@ JOIN posts ON posts.user_id = users.id
 WHERE posts.published = true
 ```
 
+#### INSERT with RETURNING
+```javascript
+supabase.from('users')
+  .insert({name: 'John', email: 'john@example.com'})
+  .select('id, name, email')
+```
+Translates to:
+```sql
+INSERT INTO users (name, email) VALUES ('John', 'john@example.com') RETURNING id, name, email
+```
+
 ## Configuration
 
 Add to your VS Code settings:
 
 ```json
 {
-  "supasense.enableRealtimeTranslation": true,
-  "supasense.authUserId": "your-user-id",
-  "supasense.isAdmin": false
+  "supabase-query-translator.enableRealtimeTranslation": true,
+  "supabase-query-translator.authUserId": "your-user-id",
+  "supabase-query-translator.isAdmin": false
 }
 ```
 
@@ -156,6 +242,8 @@ src/
 │   ├── query-visitor.ts # Visitor pattern
 │   └── index.ts         # Main parser
 ├── sql-generator/       # SQL string assembly
+├── enhanced-translator.ts # Enhanced translation pipeline
+├── http-translator.ts   # Custom HTTP/cURL translator
 ├── test/                # Test suite
 │   ├── unit/            # Unit tests
 │   ├── suite/           # Integration tests
@@ -164,6 +252,31 @@ src/
 ```
 
 ## Key Implementation Details
+
+### Enhanced Translation Pipeline
+The extension now provides a complete translation pipeline:
+
+```typescript
+class EnhancedTranslator {
+  async supabaseToSql(supabaseQuery: string): Promise<TranslationResult>
+  async translateToHttp(supabaseQuery: string): Promise<TranslationResult>
+  async translateToCurl(supabaseQuery: string): Promise<TranslationResult>
+  async roundTripTranslation(supabaseQuery: string): Promise<TranslationResult>
+  async fullTranslation(supabaseQuery: string): Promise<TranslationResult>
+}
+```
+
+### Custom HTTP Translator
+Overcomes the limitation of `sql-to-rest` library (SELECT-only) by providing full CRUD support:
+
+```typescript
+class HttpTranslator {
+  private sqlToHttpRequest(sql: string): HttpRequest {
+    // Supports SELECT, INSERT, UPDATE, DELETE operations
+    // Generates proper HTTP methods, headers, and bodies
+  }
+}
+```
 
 ### ts-morph AST Parsing
 The extension uses ts-morph for accurate TypeScript/JavaScript parsing:
@@ -174,19 +287,6 @@ class AstParser {
   parseQueryText(queryText: string): any[] {
     const sourceFile = this.project.createSourceFile('query.ts', queryText);
     return this.parseMethodChain(sourceFile);
-  }
-}
-```
-
-### Visitor Pattern
-The extension uses the Visitor pattern for AST traversal:
-```typescript
-class QueryVisitor {
-  visitCallExpression(call) {
-    switch (call.getName()) {
-      case 'select': /* ... */ 
-      case 'eq': /* ... */
-    }
   }
 }
 ```
@@ -204,29 +304,33 @@ try {
 }
 ```
 
-## Test Cases
+## Test Coverage
 
 Run the comprehensive test suite:
 
 ```bash
-npm run test
+npm run test:unit
 ```
 
-The test suite covers:
-- ✅ CRUD operations
-- ✅ Advanced filtering
-- ✅ Joins & relationships
-- ✅ Auth/RLS support
-- ✅ JSONB operations
-- ✅ RPC calls
-- ✅ Edge cases
-- ✅ Performance benchmarks
+The test suite covers **87 test cases** including:
+- ✅ **CRUD operations** (SELECT, INSERT, UPDATE, DELETE, UPSERT)
+- ✅ **Advanced filtering** (OR, NOT, IN, CONTAINS, text search, range)
+- ✅ **Joins & relationships** (foreign keys, self-referencing)
+- ✅ **Auth/RLS support** (auth.uid(), admin bypass)
+- ✅ **JSONB operations** (->>, @>, nested objects)
+- ✅ **RPC calls** (function calls, complex parameters)
+- ✅ **Edge cases** (malformed queries, special characters, performance)
+- ✅ **HTTP/cURL translation** (all CRUD operations)
+- ✅ **Round-trip translation** (Supabase JS → SQL → Supabase JS)
+- ✅ **Error handling** (graceful degradation, meaningful messages)
 
 ## Dependencies
 
 - **ts-morph**: TypeScript AST manipulation and parsing
-- **knex**: SQL query builder
+- **@supabase/sql-to-rest**: SQL to PostgREST HTTP translation (SELECT operations)
 - **@types/vscode**: VS Code extension types
+- **mocha**: Testing framework
+- **chai**: Assertion library
 
 ## Contributing
 
@@ -238,6 +342,10 @@ The test suite covers:
 ## Roadmap
 
 - [x] Enhanced AST parsing with ts-morph
+- [x] Full CRUD support for HTTP/cURL translation
+- [x] Round-trip translation (Supabase JS → SQL → Supabase JS)
+- [x] Comprehensive edge case handling
+- [x] Performance optimization
 - [ ] Support for more complex query patterns
 - [ ] Integration with Supabase schema introspection
 - [ ] Query performance analysis
