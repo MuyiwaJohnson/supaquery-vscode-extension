@@ -273,23 +273,29 @@ export class EnhancedTranslator {
     
     // Try to get Supabase JS translation, but handle errors gracefully
     let supabaseJsResult;
-    try {
-      supabaseJsResult = await this.sqlToSupabaseJs(sqlResult.sql);
-    } catch (error) {
-      // sql-to-rest only supports SELECT queries, so non-SELECT queries will fail
-      supabaseJsResult = {
-        supabaseJs: undefined,
-        error: 'Round-trip to Supabase JS not supported for non-SELECT queries'
-      };
+    let supabaseJsError = undefined;
+    
+    if (sqlResult.sql.toUpperCase().startsWith('SELECT')) {
+      try {
+        supabaseJsResult = await this.sqlToSupabaseJs(sqlResult.sql);
+      } catch (error) {
+        supabaseJsError = 'Failed to generate Supabase JS for SELECT query';
+      }
+    } else {
+      // For non-SELECT queries, sql-to-rest doesn't support them
+      supabaseJsError = 'Round-trip to Supabase JS not supported for non-SELECT queries (sql-to-rest limitation)';
     }
 
     return {
       original: supabaseQuery,
       sql: sqlResult.sql,
       http: httpResult.http,
-      supabaseJs: supabaseJsResult.supabaseJs,
-      warnings: sqlResult.warnings,
-      error: httpResult.error || supabaseJsResult.error
+      supabaseJs: supabaseJsResult?.supabaseJs,
+      warnings: [
+        ...(sqlResult.warnings || []),
+        ...(supabaseJsError ? [supabaseJsError] : [])
+      ],
+      error: httpResult.error
     };
   }
 

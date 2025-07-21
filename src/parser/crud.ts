@@ -77,6 +77,11 @@ export class CrudParser {
       return arg;
     } else if (typeof arg === 'object') {
       return [arg];
+    } else if (typeof arg === 'string') {
+      // Handle variables like customerData - create a placeholder object
+      return [{
+        [arg]: '?' // Use the variable name as a placeholder
+      }];
     }
     throw new Error('Invalid insert values format');
   }
@@ -84,6 +89,11 @@ export class CrudParser {
   private parseUpdateValues(arg: any): any[] {
     if (typeof arg === 'object' && !Array.isArray(arg)) {
       return [arg];
+    } else if (typeof arg === 'string') {
+      // Handle variables like customerData - create a placeholder object
+      return [{
+        [arg]: '?' // Use the variable name as a placeholder
+      }];
     }
     throw new Error('Invalid update values format');
   }

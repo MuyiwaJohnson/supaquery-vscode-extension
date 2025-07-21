@@ -98,6 +98,9 @@ export class AstParser {
       case SyntaxKind.ArrayLiteralExpression:
         return this.parseArrayLiteral(node.asKind(SyntaxKind.ArrayLiteralExpression)!);
       
+      case SyntaxKind.ConditionalExpression:
+        throw new Error('Dynamic select statements with ternary operators are not supported. Please build your select string outside of the query.');
+
       case SyntaxKind.NumericLiteral:
         return Number(node.getText());
       
