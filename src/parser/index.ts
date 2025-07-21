@@ -91,6 +91,45 @@ export class SupabaseQueryParser {
   // Parse complex queries with multiple patterns
   parseComplexQuery(queryText: string): ParsedQuery {
     try {
+      // Handle edge cases first
+      if (!queryText || queryText.trim() === '') {
+        return {
+          original: queryText,
+          sql: undefined,
+          error: 'Empty query provided',
+          warnings: []
+        };
+      }
+
+      if (queryText === null || queryText === undefined) {
+        return {
+          original: queryText,
+          sql: '',
+          error: 'Query cannot be null or undefined',
+          warnings: []
+        };
+      }
+
+      // Check for malformed queries
+      if (this.isMalformedQuery(queryText)) {
+        return {
+          original: queryText,
+          sql: '',
+          error: 'Malformed query detected',
+          warnings: ['Query contains syntax errors or incomplete method chains']
+        };
+      }
+
+      // Check for malformed JSON - disabled for now due to false positives
+      // if (this.hasMalformedJson(queryText)) {
+      //   return {
+      //     original: queryText,
+      //     sql: '',
+      //     error: 'Malformed JSON detected in query',
+      //     warnings: ['Query contains invalid JSON syntax']
+      //   };
+      // }
+
       // Handle RPC calls
       if (queryText.includes('supabase.rpc(')) {
         return this.parseRpcQuery(queryText);
@@ -118,9 +157,54 @@ export class SupabaseQueryParser {
     }
   }
 
+  private isMalformedQuery(queryText: string): boolean {
+    // Check for unmatched parentheses
+    const openParens = (queryText.match(/\(/g) || []).length;
+    const closeParens = (queryText.match(/\)/g) || []).length;
+    if (openParens !== closeParens) {
+      return true;
+    }
+
+    // Check for incomplete method chains
+    if (queryText.includes('.select(') && !queryText.includes(')')) {
+      return true;
+    }
+
+    // Check for empty table names
+    const tableMatch = queryText.match(/supabase\.from\(['"`]([^'"`]*)['"`]\)/);
+    if (tableMatch && !tableMatch[1].trim()) {
+      return true;
+    }
+
+    return false;
+  }
+
+  private hasMalformedJson(queryText: string): boolean {
+    // Look for malformed JSON patterns that are likely to cause issues
+    // Check for unmatched braces in object literals
+    const braceMatches = queryText.match(/\{[^{}]*\}/g);
+    if (braceMatches) {
+      for (const match of braceMatches) {
+        // Skip if it's a valid simple object
+        try {
+          JSON.parse(match);
+        } catch {
+          // Check if it's a common malformed pattern
+          if (match.includes('invalid: json') || 
+              match.includes('undefined:') ||
+              match.includes('null:') ||
+              /[a-zA-Z_$][a-zA-Z0-9_$]*\s*:\s*[^"'\d\[\]{}]/.test(match)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   private parseRpcQuery(queryText: string): ParsedQuery {
-    // Extract RPC function name and parameters
-    const rpcMatch = queryText.match(/supabase\.rpc\(['"]([^'"]+)['"],\s*({[^}]+})\)/);
+    // Extract RPC function name and parameters with better regex
+    const rpcMatch = queryText.match(/supabase\.rpc\(['"`]([^'"`]+)['"`],\s*({[^}]+})\)/);
     
     if (rpcMatch) {
       const functionName = rpcMatch[1];
@@ -132,6 +216,22 @@ export class SupabaseQueryParser {
         original: queryText,
         sql: sql,
         warnings: ['RPC calls may have different parameter handling in SQL']
+      };
+    }
+
+    // Handle RPC calls with complex nested parameters
+    const complexRpcMatch = queryText.match(/supabase\.rpc\(['"`]([^'"`]+)['"`],\s*({.*})\)/s);
+    
+    if (complexRpcMatch) {
+      const functionName = complexRpcMatch[1];
+      const params = complexRpcMatch[2];
+      
+      const sql = `SELECT * FROM ${functionName}(${params})`;
+      
+      return {
+        original: queryText,
+        sql: sql,
+        warnings: ['RPC calls with complex parameters may require manual SQL adjustment']
       };
     }
     
