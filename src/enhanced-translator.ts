@@ -261,8 +261,15 @@ export class EnhancedTranslator {
       return sqlResult;
     }
 
-    // Get HTTP translation directly from the original Supabase query
-    const httpResult = await this.translateToHttp(supabaseQuery);
+    // Get HTTP translation - use different approaches for SELECT vs non-SELECT
+    let httpResult;
+    if (sqlResult.sql.toUpperCase().startsWith('SELECT')) {
+      // For SELECT queries, use sqlToHttp which uses sql-to-rest
+      httpResult = await this.sqlToHttp(sqlResult.sql);
+    } else {
+      // For non-SELECT queries, use translateToHttp with the original Supabase query
+      httpResult = await this.translateToHttp(supabaseQuery);
+    }
     
     // Try to get Supabase JS translation, but handle errors gracefully
     let supabaseJsResult;
