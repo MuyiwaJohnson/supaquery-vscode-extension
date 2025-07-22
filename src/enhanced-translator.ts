@@ -318,7 +318,7 @@ export class EnhancedTranslator {
         curlResult = { status: 'fulfilled' as const, value: customCurlResult };
         supabaseJsResult = { 
           status: 'rejected' as const, 
-          reason: 'Supabase JS generation not supported for non-SELECT queries (sql-to-rest limitation)' 
+          reason: undefined 
         };
       }
 
@@ -330,7 +330,7 @@ export class EnhancedTranslator {
         supabaseJs: supabaseJsResult.status === 'fulfilled' ? supabaseJsResult.value.supabaseJs : undefined,
         warnings: [
           ...(sqlResult.warnings || []),
-          ...(supabaseJsResult.status === 'rejected' ? [supabaseJsResult.reason] : [])
+          ...(supabaseJsResult.status === 'rejected' && supabaseJsResult.reason ? [supabaseJsResult.reason] : [])
         ],
         error: httpResult.status === 'rejected' || curlResult.status === 'rejected'
           ? 'Some translations failed' 

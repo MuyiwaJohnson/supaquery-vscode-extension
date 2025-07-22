@@ -19,7 +19,6 @@ describe('EnhancedTranslator CRUD Operations', () => {
       expect(result.http).to.exist;
       expect(result.http!.method).to.equal('PATCH');
       expect(result.curl).to.include('curl -X PATCH');
-      expect(result.warnings).to.include('Supabase JS generation not supported for non-SELECT queries (sql-to-rest limitation)');
     });
 
     it('should handle INSERT queries', async () => {

@@ -125,13 +125,6 @@ export class SqlGenerator {
       sql += ` OFFSET ${queryNode.offset}`;
     }
     
-    // Add comments for single/maybeSingle methods
-    if (queryNode.single) {
-      sql += ' -- Returns single result (throws if multiple rows)';
-    } else if (queryNode.maybeSingle) {
-      sql += ' -- Returns single result or null (no error if multiple rows)';
-    }
-    
     return sql;
   }
 

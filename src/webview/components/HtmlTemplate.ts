@@ -19,22 +19,15 @@ export class HtmlTemplate {
     <link href="${styleVSCodeUri}" rel="stylesheet">
     <link href="${styleMainUri}" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
 </head>
 <body>
     <div class="container">
         <div id="resultContainer" class="result-container">
-            <div class="empty-state">
-                <div class="empty-icon">📄</div>
-                <h3>No translation yet</h3>
-                <p>Select some Supabase JavaScript code and run the translate command to see results here.</p>
-            </div>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
     <script>
         const vscode = acquireVsCodeApi();
         
@@ -85,7 +78,7 @@ export class HtmlTemplate {
                                     </div>
                                 </div>
                                 <div class="code-content">
-                                    <pre class="line-numbers"><code class="language-javascript">\${escapeHtml(result.originalQuery)}</code></pre>
+                                    <pre><code class="language-javascript">\${escapeHtml(result.originalQuery)}</code></pre>
                                 </div>
                             </div>
                             <div class="error-section">
@@ -165,7 +158,7 @@ export class HtmlTemplate {
                         </button>
                     </div>
                     <div class="code-content">
-                        <pre class="line-numbers"><code class="language-\${language}">\${escapeHtml(formattedCode)}</code></pre>
+                        <pre><code class="language-\${language}">\${escapeHtml(formattedCode)}</code></pre>
                     </div>
                 </div>
             \`;
