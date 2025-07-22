@@ -2,37 +2,138 @@ import { SupabaseQueryParser } from './parser';
 import { processSql, renderSupabaseJs, renderHttp, formatCurl } from '@supabase/sql-to-rest';
 import { HttpTranslator } from './http-translator';
 
-// Unified HTTP request interface
+/**
+ * Unified HTTP request interface for consistent request representation.
+ * 
+ * This interface provides a standardized way to represent HTTP requests
+ * across different translation methods and external libraries.
+ * 
+ * @example
+ * ```typescript
+ * const request: UnifiedHttpRequest = {
+ *   method: 'GET',
+ *   path: '/users',
+ *   fullPath: 'http://localhost:54321/rest/v1/users',
+ *   params: new Map([['select', 'id,name']]),
+ *   headers: new Map([['Content-Type', 'application/json']])
+ * };
+ * ```
+ */
 export interface UnifiedHttpRequest {
+  /** HTTP method (GET, POST, PATCH, DELETE) */
   method: string;
+  
+  /** The API endpoint path */
   path: string;
+  
+  /** Full URL including base URL */
   fullPath: string;
+  
+  /** Query parameters for GET requests or filters */
   params: Map<string, string>;
+  
+  /** HTTP headers */
   headers?: Map<string, string>;
+  
+  /** Request body for POST/PATCH requests */
   body?: any;
 }
 
+/**
+ * Comprehensive result of any translation operation.
+ * 
+ * This interface represents the output of any translation method, containing
+ * all possible formats (SQL, HTTP, cURL, Supabase JS) and metadata.
+ * 
+ * @example
+ * ```typescript
+ * const result: TranslationResult = {
+ *   original: "supabase.from('users').select('*')",
+ *   sql: "SELECT * FROM users",
+ *   http: { method: 'GET', path: '/users', ... },
+ *   curl: "curl -G 'http://localhost:54321/rest/v1/users'",
+ *   supabaseJs: "supabase.from('users').select('*')",
+ *   warnings: []
+ * };
+ * ```
+ */
 export interface TranslationResult {
+  /** The original input query */
   original: string;
+  
+  /** The generated SQL query */
   sql?: string;
+  
+  /** The generated HTTP request */
   http?: UnifiedHttpRequest;
+  
+  /** The generated cURL command */
   curl?: string;
+  
+  /** The generated Supabase JavaScript code */
   supabaseJs?: string;
+  
+  /** Error message if translation failed */
   error?: string;
+  
+  /** Performance and safety warnings */
   warnings?: string[];
 }
 
+/**
+ * Enhanced translator that provides comprehensive translation capabilities.
+ * 
+ * This class combines multiple translation methods to provide a complete
+ * translation pipeline from Supabase JavaScript queries to various formats:
+ * - SQL queries
+ * - HTTP requests (PostgREST compatible)
+ * - cURL commands
+ * - Round-trip Supabase JavaScript code
+ * 
+ * @example
+ * ```typescript
+ * const translator = new EnhancedTranslator('http://localhost:54321/rest/v1');
+ * 
+ * // Full translation with all formats
+ * const result = await translator.fullTranslation(`
+ *   supabase.from('users').select('id, name').eq('active', true)
+ * `);
+ * 
+ * console.log(result.sql);    // SELECT id, name FROM users WHERE active = true
+ * console.log(result.http);   // GET /users?select=id,name&active=eq.true
+ * console.log(result.curl);   // curl -G 'http://localhost:54321/rest/v1/users'...
+ * ```
+ */
 export class EnhancedTranslator {
+  /** Parser for converting Supabase queries to SQL */
   private parser: SupabaseQueryParser;
+  
+  /** HTTP translator for converting SQL to HTTP requests */
   private httpTranslator: HttpTranslator;
 
+  /**
+   * Creates a new EnhancedTranslator instance.
+   * 
+   * @param baseUrl - The base URL for the PostgREST API (defaults to localhost:54321)
+   */
   constructor(baseUrl: string = 'http://localhost:54321/rest/v1') {
     this.parser = new SupabaseQueryParser();
     this.httpTranslator = new HttpTranslator(baseUrl);
   }
 
   /**
-   * Translate Supabase JS query to SQL
+   * Translates a Supabase JavaScript query to SQL.
+   * 
+   * @param supabaseQuery - The Supabase JavaScript query string to translate
+   * @returns A promise that resolves to a {@link TranslationResult} with SQL output
+   * 
+   * @example
+   * ```typescript
+   * const result = await translator.supabaseToSql(`
+   *   supabase.from('users').select('id, name').eq('active', true)
+   * `);
+   * console.log(result.sql); // SELECT id, name FROM users WHERE active = true
+   * ```
    */
   async supabaseToSql(supabaseQuery: string): Promise<TranslationResult> {
     try {
@@ -53,7 +154,19 @@ export class EnhancedTranslator {
   }
 
   /**
-   * Translate SQL to HTTP request
+   * Translates SQL to an HTTP request compatible with PostgREST.
+   * 
+   * This method uses the @supabase/sql-to-rest library for SELECT queries
+   * and falls back to the custom HTTP translator for other operations.
+   * 
+   * @param sql - The SQL query to translate
+   * @returns A promise that resolves to a {@link TranslationResult} with HTTP output
+   * 
+   * @example
+   * ```typescript
+   * const result = await translator.sqlToHttp("SELECT id, name FROM users WHERE active = true");
+   * console.log(result.http); // { method: 'GET', path: '/users', ... }
+   * ```
    */
   async sqlToHttp(sql: string): Promise<TranslationResult> {
     try {

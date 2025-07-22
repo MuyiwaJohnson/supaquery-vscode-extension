@@ -2,15 +2,62 @@ import { QueryNode, WhereClause, JoinClause, OrderByClause } from '../parser/typ
 import { FilterParser } from '../parser/filters';
 import { JoinParser } from '../parser/joins';
 
+/**
+ * SQL generator for converting parsed query nodes to SQL strings.
+ * 
+ * This class takes structured {@link QueryNode} objects and generates
+ * corresponding SQL queries. It handles all CRUD operations (SELECT, INSERT,
+ * UPDATE, DELETE, UPSERT) and includes support for JOINs, WHERE clauses,
+ * ORDER BY, GROUP BY, HAVING, LIMIT, and OFFSET.
+ * 
+ * @example
+ * ```typescript
+ * const generator = new SqlGenerator();
+ * 
+ * const queryNode: QueryNode = {
+ *   type: 'select',
+ *   table: 'users',
+ *   columns: ['id', 'name', 'email'],
+ *   where: [{ column: 'active', operator: 'eq', value: true }],
+ *   limit: 10
+ * };
+ * 
+ * const sql = generator.generateSql(queryNode);
+ * // Returns: "SELECT id, name, email FROM users WHERE active = true LIMIT 10"
+ * ```
+ */
 export class SqlGenerator {
+  /** Parser for handling WHERE clause conditions */
   private filterParser: FilterParser;
+  
+  /** Parser for handling JOIN clauses */
   private joinParser: JoinParser;
 
+  /**
+   * Creates a new SqlGenerator instance with initialized parsers.
+   */
   constructor() {
     this.filterParser = new FilterParser({ currentTable: '', aliases: new Map() });
     this.joinParser = new JoinParser({ currentTable: '', aliases: new Map() });
   }
 
+  /**
+   * Generates SQL from a parsed query node.
+   * 
+   * This method routes to the appropriate SQL generation method based on
+   * the query type (SELECT, INSERT, UPDATE, DELETE, UPSERT).
+   * 
+   * @param queryNode - The parsed query node to convert to SQL
+   * @returns Generated SQL string
+   * 
+   * @example
+   * ```typescript
+   * const sql = generator.generateSql(queryNode);
+   * console.log(sql); // "SELECT id, name FROM users WHERE active = true"
+   * ```
+   * 
+   * @throws {Error} When the query type is not supported
+   */
   generateSql(queryNode: QueryNode): string {
     switch (queryNode.type) {
       case 'select':
@@ -68,8 +115,8 @@ export class SqlGenerator {
       sql += ` ORDER BY ${orderByClause}`;
     }
     
-    // Add LIMIT
-    if (queryNode.limit) {
+    // Add LIMIT (but not for single/maybeSingle as they're handled differently in HTTP)
+    if (queryNode.limit && !queryNode.single && !queryNode.maybeSingle) {
       sql += ` LIMIT ${queryNode.limit}`;
     }
     

@@ -3,17 +3,63 @@ import { QueryVisitor } from './query-visitor';
 import { SqlGenerator } from '../sql-generator';
 import { AstParser } from './ast-parser';
 
+/**
+ * Main parser class for translating Supabase JavaScript queries to SQL.
+ * 
+ * This class orchestrates the parsing process by:
+ * 1. Using AST parsing to extract method chains from Supabase queries
+ * 2. Converting method chains into structured query nodes
+ * 3. Generating SQL from query nodes
+ * 4. Providing warnings for potential performance issues
+ * 
+ * @example
+ * ```typescript
+ * const parser = new SupabaseQueryParser();
+ * const result = parser.parseComplexQuery(`
+ *   supabase.from('users').select('id, name').eq('active', true)
+ * `);
+ * console.log(result.sql); // SELECT id, name FROM users WHERE active = true
+ * ```
+ */
 export class SupabaseQueryParser {
+  /** Threshold for warning about large LIMIT values that may impact performance */
+  private static readonly LARGE_LIMIT_THRESHOLD = 1000;
+  
+  /** Visitor pattern implementation for parsing method chains */
   private visitor: QueryVisitor;
+  
+  /** SQL generator for converting query nodes to SQL strings */
   private sqlGenerator: SqlGenerator;
+  
+  /** AST parser for extracting method chains from JavaScript code */
   private astParser: AstParser;
 
+  /**
+   * Creates a new SupabaseQueryParser instance with initialized components.
+   */
   constructor() {
     this.visitor = new QueryVisitor();
     this.sqlGenerator = new SqlGenerator();
     this.astParser = new AstParser();
   }
 
+  /**
+   * Parses a Supabase JavaScript query and converts it to SQL.
+   * 
+   * This method handles basic query parsing using AST analysis and method chain processing.
+   * For more complex queries with edge cases, use {@link parseComplexQuery}.
+   * 
+   * @param queryText - The Supabase JavaScript query string to parse
+   * @returns A {@link ParsedQuery} object containing the SQL result and any warnings
+   * 
+   * @example
+   * ```typescript
+   * const result = parser.parseQuery("supabase.from('users').select('*')");
+   * console.log(result.sql); // SELECT * FROM users
+   * ```
+   * 
+   * @throws {Error} When the query cannot be parsed due to syntax errors
+   */
   parseQuery(queryText: string): ParsedQuery {
     try {
       // Use ts-morph AST parser to extract the method chain
@@ -43,6 +89,21 @@ export class SupabaseQueryParser {
 
 
 
+  /**
+   * Generates performance and safety warnings for a parsed query node.
+   * 
+   * @param queryNode - The parsed query node to analyze
+   * @returns Array of warning messages for potential issues
+   * 
+   * @example
+   * ```typescript
+   * const warnings = this.generateWarnings(queryNode);
+   * // Returns warnings like:
+   * // - "Consider selecting specific columns instead of * for better performance"
+   * // - "DELETE query without WHERE clause will delete all rows"
+   * // - "Large LIMIT value may impact performance"
+   * ```
+   */
   private generateWarnings(queryNode: any): string[] {
     const warnings: string[] = [];
     
@@ -55,40 +116,104 @@ export class SupabaseQueryParser {
       warnings.push('DELETE query without WHERE clause will delete all rows');
     }
     
-    if (queryNode.limit && queryNode.limit > 1000) {
+    if (queryNode.limit && queryNode.limit > SupabaseQueryParser.LARGE_LIMIT_THRESHOLD) {
       warnings.push('Large LIMIT value may impact performance');
     }
     
     return warnings;
   }
 
-  // Parse specific query patterns
+  /**
+   * Parses a SELECT query specifically.
+   * @param queryText - The SELECT query string
+   * @returns Parsed query result
+   */
   parseSelectQuery(queryText: string): ParsedQuery {
     return this.parseQuery(queryText);
   }
 
+  /**
+   * Parses an INSERT query specifically.
+   * @param queryText - The INSERT query string
+   * @returns Parsed query result
+   */
   parseInsertQuery(queryText: string): ParsedQuery {
     return this.parseQuery(queryText);
   }
 
+  /**
+   * Parses an UPDATE query specifically.
+   * @param queryText - The UPDATE query string
+   * @returns Parsed query result
+   */
   parseUpdateQuery(queryText: string): ParsedQuery {
     return this.parseQuery(queryText);
   }
 
+  /**
+   * Parses a DELETE query specifically.
+   * @param queryText - The DELETE query string
+   * @returns Parsed query result
+   */
   parseDeleteQuery(queryText: string): ParsedQuery {
     return this.parseQuery(queryText);
   }
 
+  /**
+   * Parses an UPSERT query specifically.
+   * @param queryText - The UPSERT query string
+   * @returns Parsed query result
+   */
   parseUpsertQuery(queryText: string): ParsedQuery {
     return this.parseQuery(queryText);
   }
 
-  // Set auth context for RLS support
+  /**
+   * Sets the authentication context for Row Level Security (RLS) support.
+   * 
+   * This method configures the parser to handle auth-related queries like `auth.uid()`
+   * and `auth.admin` checks in WHERE clauses.
+   * 
+   * @param userId - The current user ID for RLS context
+   * @param isAdmin - Whether the current user has admin privileges
+   * 
+   * @example
+   * ```typescript
+   * parser.setAuthContext('user123', false);
+   * const result = parser.parseQuery(`
+   *   supabase.from('posts').select('*').eq('user_id', 'auth.uid()')
+   * `);
+   * ```
+   */
   setAuthContext(userId?: string, isAdmin: boolean = false): void {
     this.visitor.setAuthContext(userId, isAdmin);
   }
 
-  // Parse complex queries with multiple patterns
+  /**
+   * Parses complex Supabase queries with advanced pattern recognition.
+   * 
+   * This method handles edge cases and complex scenarios that the basic parser might miss:
+   * - Empty or null queries
+   * - Malformed queries with syntax errors
+   * - RPC (Remote Procedure Call) queries
+   * - Auth-related queries with RLS
+   * - JSONB queries with operators
+   * 
+   * @param queryText - The Supabase JavaScript query string to parse
+   * @returns A {@link ParsedQuery} object with SQL result, warnings, and error handling
+   * 
+   * @example
+   * ```typescript
+   * const result = parser.parseComplexQuery(`
+   *   supabase.from('users')
+   *     .select('id, name, profile->>email')
+   *     .eq('active', true)
+   *     .eq('user_id', 'auth.uid()')
+   * `);
+   * ```
+   * 
+   * @throws {Error} When the query contains unsupported patterns or syntax errors
+   */
   parseComplexQuery(queryText: string): ParsedQuery {
     try {
       // Handle edge cases first
@@ -157,6 +282,19 @@ export class SupabaseQueryParser {
     }
   }
 
+  /**
+   * Checks if a query string contains malformed syntax that would prevent parsing.
+   * 
+   * @param queryText - The query string to validate
+   * @returns True if the query is malformed, false otherwise
+   * 
+   * @example
+   * ```typescript
+   * this.isMalformedQuery("supabase.from('users').select("); // true - unmatched parentheses
+   * this.isMalformedQuery("supabase.from('').select('*')"); // true - empty table name
+   * this.isMalformedQuery("supabase.from('users').select('*')"); // false - valid query
+   * ```
+   */
   private isMalformedQuery(queryText: string): boolean {
     // Check for unmatched parentheses
     const openParens = (queryText.match(/\(/g) || []).length;

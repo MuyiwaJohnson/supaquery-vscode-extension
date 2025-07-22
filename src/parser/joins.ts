@@ -1,13 +1,63 @@
 import { JoinClause, ParserContext } from './types';
 
+/**
+ * Parser for handling JOIN clauses and relationship queries in Supabase.
+ * 
+ * This class is responsible for parsing complex relationship syntax like:
+ * - `posts(title, content)` - simple relationships
+ * - `posts:user_posts(title, content)` - relationships with aliases
+ * - `posts(title, comments(content, author))` - nested relationships
+ * 
+ * @example
+ * ```typescript
+ * const context: ParserContext = { currentTable: 'users', aliases: new Map() };
+ * const joinParser = new JoinParser(context);
+ * 
+ * const result = joinParser.parseSelectWithJoins('id, name, posts(title, content)');
+ * // Returns: { columns: ['id', 'name', 'posts.title', 'posts.content'], joins: [...] }
+ * ```
+ */
 export class JoinParser {
+  /** Parser context containing current table and aliases */
   private context: ParserContext;
 
+  /**
+   * Creates a new JoinParser instance.
+   * 
+   * @param context - Parser context with current table and alias information
+   */
   constructor(context: ParserContext) {
     this.context = context;
   }
 
+  /**
+   * Parses a SELECT argument string and extracts columns and JOIN clauses.
+   * 
+   * This method handles various SELECT patterns:
+   * - Simple columns: `"id, name, email"`
+   * - Wildcard: `"*"`
+   * - Simple relationships: `"posts(title, content)"`
+   * - Complex nested relationships: `"posts(title, comments(content, author))"`
+   * - Aliased relationships: `"posts:user_posts(title, content)"`
+   * 
+   * @param selectArg - The SELECT argument string to parse
+   * @returns Object containing extracted columns and JOIN clauses
+   * 
+   * @example
+   * ```typescript
+   * const result = joinParser.parseSelectWithJoins('id, name, posts(title, content)');
+   * // Returns: {
+   * //   columns: ['id', 'name', 'posts.title', 'posts.content'],
+   * //   joins: [{ table: 'posts', on: 'posts.user_id = users.id', type: 'INNER' }]
+   * // }
+   * ```
+   */
   parseSelectWithJoins(selectArg: string): { columns: string[], joins: JoinClause[] } {
+    // Check if this is a complex nested relationship query
+    if (selectArg.includes('(') && (selectArg.includes(':') || this.hasNestedRelationships(selectArg))) {
+      return this.parseComplexJoins(selectArg);
+    }
+    
     const columns: string[] = [];
     const joins: JoinClause[] = [];
     
@@ -44,8 +94,21 @@ export class JoinParser {
       return [tableName, ['*']];
     }
     
-    const tableName = part.substring(0, openParenIndex).trim();
+    const tablePart = part.substring(0, openParenIndex).trim();
     const columnListStr = part.substring(openParenIndex + 1, closeParenIndex);
+    
+    // Handle Supabase alias syntax: "table:alias" or just "table"
+    let tableName: string;
+    let alias: string | undefined;
+    
+    if (tablePart.includes(':')) {
+      const [table, aliasPart] = tablePart.split(':').map(s => s.trim());
+      tableName = table;
+      alias = aliasPart;
+      // TODO: Use alias in join conditions for better SQL generation
+    } else {
+      tableName = tablePart;
+    }
     
     const columnList = columnListStr
       .split(',')
@@ -68,6 +131,22 @@ export class JoinParser {
 
   private formatRelationshipColumns(tableName: string, columns: string[]): string[] {
     return columns.map(column => `${tableName}.${column}`);
+  }
+
+  private hasNestedRelationships(selectArg: string): boolean {
+    // Check if there are nested parentheses indicating nested relationships
+    let openCount = 0;
+    for (const char of selectArg) {
+      if (char === '(') {
+        openCount++;
+        if (openCount > 1) {
+          return true; // Found nested parentheses
+        }
+      } else if (char === ')') {
+        openCount--;
+      }
+    }
+    return false;
   }
 
   parseJoinFilters(methodChain: any[]): JoinClause[] {
@@ -105,19 +184,42 @@ export class JoinParser {
     const columns: string[] = [];
     const joins: JoinClause[] = [];
     
-    // Handle nested relationships like "posts(comments(content))"
-    const nestedPattern = /(\w+)\(([^()]+(?:\([^()]*\)[^()]*)*)\)/g;
+    // First, extract regular columns (those without parentheses)
+    const regularColumns = selectArg.split(',')
+      .map(part => part.trim())
+      .filter(part => !part.includes('(') && part.length > 0)
+      .map(col => col.replace(/\)+$/, '').trim()) // Remove trailing parentheses
+      .filter(col => col.length > 0);
+    
+    columns.push(...regularColumns);
+    
+    // Then handle relationship columns with parentheses
+    // Use a more sophisticated approach to handle nested parentheses
+    const relationshipPattern = /([\w:]+)\s*\(\s*([^()]+(?:\([^()]*\)[^()]*)*)\s*\)/g;
     let match;
     
-    while ((match = nestedPattern.exec(selectArg)) !== null) {
-      const [fullMatch, tableName, nestedContent] = match;
+    while ((match = relationshipPattern.exec(selectArg)) !== null) {
+      const [fullMatch, tablePart, content] = match;
+      
+      // Parse table name and alias
+      let tableName: string;
+      let alias: string | undefined;
+      
+      if (tablePart.includes(':')) {
+        const [table, aliasPart] = tablePart.split(':').map(s => s.trim());
+        tableName = table;
+        alias = aliasPart;
+        // TODO: Use alias in join conditions for better SQL generation
+      } else {
+        tableName = tablePart;
+      }
       
       // Create join for the main table
       const mainJoin = this.createJoinClause(tableName);
       joins.push(mainJoin);
       
-      // Parse nested content
-      const nestedColumns = this.parseNestedColumns(tableName, nestedContent);
+      // Parse the content (handle nested relationships recursively)
+      const nestedColumns = this.parseNestedColumns(tableName, content);
       columns.push(...nestedColumns);
     }
     
@@ -133,16 +235,39 @@ export class JoinParser {
       return columnList.map(col => `${parentTable}.${col}`);
     }
     
-    // Handle nested relationships
-    const nestedPattern = /(\w+)\(([^()]+)\)/g;
+    // Handle nested relationships with aliases
+    const nestedPattern = /([\w:]+)\s*\(\s*([^)]+)\s*\)/g;
     let match;
     
     while ((match = nestedPattern.exec(nestedContent)) !== null) {
-      const [fullMatch, nestedTable, columnList] = match;
-      const fullTableName = `${parentTable}.${nestedTable}`;
+      const [fullMatch, nestedTablePart, columnList] = match;
       
-      const columns = columnList.split(',').map(col => col.trim());
-      columns.push(...columns.map(col => `${fullTableName}.${col}`));
+      // Parse nested table name and alias
+      let nestedTableName: string;
+      let nestedAlias: string | undefined;
+      
+      if (nestedTablePart.includes(':')) {
+        const [table, aliasPart] = nestedTablePart.split(':').map(s => s.trim());
+        nestedTableName = table;
+        nestedAlias = aliasPart;
+        // TODO: Use nestedAlias in column generation for better SQL
+      } else {
+        nestedTableName = nestedTablePart;
+      }
+      
+      const fullTableName = `${parentTable}.${nestedTableName}`;
+      
+      // Clean up the column list and remove any trailing parentheses
+      const cleanColumnList = columnList.replace(/\)+$/, '').trim();
+      const nestedColumns = cleanColumnList.split(',').map(col => col.trim());
+      columns.push(...nestedColumns.map(col => `${fullTableName}.${col}`));
+    }
+    
+    // Also handle any remaining simple columns in the content
+    const remainingContent = nestedContent.replace(/[\w:]+\s*\([^)]+\)/g, '').trim();
+    if (remainingContent && !remainingContent.includes('(')) {
+      const remainingColumns = remainingContent.split(',').map(col => col.trim()).filter(col => col.length > 0);
+      columns.push(...remainingColumns.map(col => `${parentTable}.${col}`));
     }
     
     return columns;

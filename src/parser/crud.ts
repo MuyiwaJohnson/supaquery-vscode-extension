@@ -89,6 +89,9 @@ export class CrudParser {
   private parseUpdateValues(arg: any): any[] {
     if (typeof arg === 'object' && !Array.isArray(arg)) {
       return [arg];
+    } else if (Array.isArray(arg)) {
+      // Handle arrays like [{ field: value }] for update operations
+      return arg;
     } else if (typeof arg === 'string') {
       // Handle variables like customerData - create a placeholder object
       return [{

@@ -1,9 +1,30 @@
 import { Project, SourceFile, CallExpression, Node, SyntaxKind, StringLiteral, ObjectLiteralExpression, ArrayLiteralExpression, PropertyAssignment, Identifier } from 'ts-morph';
 import { QueryNode, WhereClause, ParserContext } from './types';
 
+/**
+ * AST (Abstract Syntax Tree) parser for Supabase JavaScript queries.
+ * 
+ * This class uses the ts-morph library to parse JavaScript/TypeScript code
+ * and extract method chains from Supabase queries. It provides a structured
+ * way to analyze the syntax of Supabase client calls.
+ * 
+ * @example
+ * ```typescript
+ * const astParser = new AstParser();
+ * const methodChain = astParser.parseQueryText(`
+ *   supabase.from('users').select('id, name').eq('active', true)
+ * `);
+ * 
+ * // Returns an array of method call objects with getName(), getArguments(), etc.
+ * ```
+ */
 export class AstParser {
+  /** ts-morph project instance for parsing TypeScript/JavaScript code */
   private project: Project;
 
+  /**
+   * Creates a new AstParser instance with TypeScript compiler configuration.
+   */
   constructor() {
     this.project = new Project({
       useInMemoryFileSystem: true,
@@ -17,6 +38,28 @@ export class AstParser {
     });
   }
 
+  /**
+   * Parses a Supabase query string and extracts method calls.
+   * 
+   * This method creates a temporary TypeScript file and uses the AST to find
+   * all call expressions that are related to Supabase operations.
+   * 
+   * @param queryText - The Supabase JavaScript query string to parse
+   * @returns Array of method call objects with getName(), getArguments(), etc.
+   * 
+   * @example
+   * ```typescript
+   * const methodCalls = astParser.parseQuery(`
+   *   supabase.from('users').select('id, name').eq('active', true)
+   * `);
+   * 
+   * // Returns: [
+   * //   { getName: () => 'from', getArguments: () => ['users'], ... },
+   * //   { getName: () => 'select', getArguments: () => ['id, name'], ... },
+   * //   { getName: () => 'eq', getArguments: () => ['active', true], ... }
+   * // ]
+   * ```
+   */
   parseQuery(queryText: string): any[] {
     // Create a temporary source file with unique name
     const filename = `temp_${Date.now()}.ts`;
@@ -92,6 +135,10 @@ export class AstParser {
       case SyntaxKind.StringLiteral:
         return this.parseStringLiteral(node.asKind(SyntaxKind.StringLiteral)!);
       
+      case SyntaxKind.NoSubstitutionTemplateLiteral:
+      case SyntaxKind.TemplateExpression:
+        return this.parseTemplateLiteral(node);
+      
       case SyntaxKind.ObjectLiteralExpression:
         return this.parseObjectLiteral(node.asKind(SyntaxKind.ObjectLiteralExpression)!);
       
@@ -123,6 +170,21 @@ export class AstParser {
 
   private parseStringLiteral(node: StringLiteral): string {
     return node.getLiteralValue();
+  }
+
+  private parseTemplateLiteral(node: Node): string {
+    // For template literals, extract the text content
+    const text = node.getText();
+    
+    // Remove backticks and handle template expressions
+    if (text.startsWith('`') && text.endsWith('`')) {
+      // Simple template literal without expressions
+      return text.slice(1, -1);
+    }
+    
+    // For template expressions, we'll need to handle them more carefully
+    // For now, just return the raw text and let the join parser handle it
+    return text;
   }
 
   private parseObjectLiteral(node: ObjectLiteralExpression): any {
@@ -250,6 +312,12 @@ export class AstParser {
     const args = call.getArguments();
     if (args.length > 0) {
       if (Array.isArray(args[0])) {
+        // For update operations, if the array contains objects, extract them
+        // This handles cases like .update([{ field: value }])
+        const methodName = call.getName();
+        if (methodName === 'update' && args[0].length > 0 && typeof args[0][0] === 'object') {
+          return args[0]; // Return the array of objects for update
+        }
         return args[0];
       } else if (typeof args[0] === 'object') {
         return [args[0]];

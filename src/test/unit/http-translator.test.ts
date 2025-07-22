@@ -41,6 +41,75 @@ describe('Custom HTTP Translator Tests', () => {
       expect(result.http!.method).to.equal('GET');
       expect(result.http!.params.get('order')).to.equal('title.asc');
     });
+
+    it('should handle .single() method correctly', async () => {
+      const query = "supabase.from('profiles').select('field, first_name, id, last_name, phone, program_type, role, sub_type, user_name').eq('id', 'user.id').single()";
+      const result = await translator.translateToHttp(query);
+      
+      expect(result.error).to.be.undefined;
+      expect(result.http).to.exist;
+      expect(result.http!.method).to.equal('GET');
+      expect(result.http!.path).to.equal('/profiles');
+      expect(result.http!.params.get('select')).to.equal('field,first_name,id,last_name,phone,program_type,role,sub_type,user_name');
+      expect(result.http!.params.get('id')).to.equal('eq.user.id');
+      // Should NOT have limit=1 for .single()
+      expect(result.http!.params.has('limit')).to.be.false;
+      // Should have the correct Accept header for single object
+      expect(result.http!.headers.get('Accept')).to.equal('application/vnd.pgrest.object+json');
+    });
+
+    it('should handle .maybeSingle() method correctly', async () => {
+      const query = "supabase.from('profiles').select('id, name').eq('id', '123').maybeSingle()";
+      const result = await translator.translateToHttp(query);
+      
+      expect(result.error).to.be.undefined;
+      expect(result.http).to.exist;
+      expect(result.http!.method).to.equal('GET');
+      expect(result.http!.path).to.equal('/profiles');
+      expect(result.http!.params.get('select')).to.equal('id,name');
+      expect(result.http!.params.get('id')).to.equal('eq.123');
+      // Should NOT have limit=1 for .maybeSingle()
+      expect(result.http!.params.has('limit')).to.be.false;
+      // Should have the correct Accept header for single object
+      expect(result.http!.headers.get('Accept')).to.equal('application/vnd.pgrest.object+json');
+    });
+
+    it('should handle the exact user query correctly', async () => {
+      const query = `const { data, error } = await supabase
+        .from("profiles")
+        .select(
+          "field, first_name, id, last_name, phone, program_type, role, sub_type, user_name"
+        )
+        .eq("id", user.id)
+        .single();`;
+      const result = await translator.translateToHttp(query);
+      
+      expect(result.error).to.be.undefined;
+      expect(result.http).to.exist;
+      expect(result.http!.method).to.equal('GET');
+      expect(result.http!.path).to.equal('/profiles');
+      expect(result.http!.params.get('select')).to.equal('field,first_name,id,last_name,phone,program_type,role,sub_type,user_name');
+      expect(result.http!.params.get('id')).to.equal('eq.user.id');
+      // Should NOT have limit=1 for .single()
+      expect(result.http!.params.has('limit')).to.be.false;
+      // Should have the correct Accept header for single object
+      expect(result.http!.headers.get('Accept')).to.equal('application/vnd.pgrest.object+json');
+    });
+
+    it('should generate URLs without URL encoding', async () => {
+      const query = "supabase.from('profiles').select('field, first_name, id, last_name, phone, program_type, role, sub_type, user_name').eq('id', 'user.id').single()";
+      const result = await translator.translateToHttp(query);
+      
+      expect(result.error).to.be.undefined;
+      expect(result.http).to.exist;
+      
+      // Check that the fullPath doesn't contain URL encoding
+      expect(result.http!.fullPath).to.include('select=field,first_name,id,last_name,phone,program_type,role,sub_type,user_name');
+      expect(result.http!.fullPath).to.include('id=eq.user.id');
+      
+      // Should NOT contain percentage signs (URL encoding)
+      expect(result.http!.fullPath).to.not.include('%');
+    });
   });
 
   describe('INSERT Operations', () => {
@@ -155,13 +224,30 @@ describe('Custom HTTP Translator Tests', () => {
     });
 
     it('should generate cURL for DELETE request', async () => {
-      const query = "supabase.from('users').eq('id', 1).delete()";
+      const query = "supabase.from('users').delete().eq('id', 1)";
       const result = await translator.translateToHttp(query);
       
+      expect(result.error).to.be.undefined;
       expect(result.http).to.exist;
-      const curl = translator.generateCurl(result.http!);
       
+      const curl = translator.generateCurl(result.http!);
       expect(curl).to.include('curl -X DELETE');
+      expect(curl).to.include('id=eq.1');
+    });
+
+    it('should generate cURL with Accept header for .single() queries', async () => {
+      const query = "supabase.from('profiles').select('id, name').eq('id', '123').single()";
+      const result = await translator.translateToHttp(query);
+      
+      expect(result.error).to.be.undefined;
+      expect(result.http).to.exist;
+      
+      const curl = translator.generateCurl(result.http!);
+      expect(curl).to.include('curl -G');
+      expect(curl).to.include('Accept: application/vnd.pgrest.object+json');
+      expect(curl).to.include('id=eq.123');
+      // Should NOT include limit=1
+      expect(curl).to.not.include('limit=1');
     });
   });
 
