@@ -11,10 +11,12 @@ Brief description of changes made in this PR.
 - [ ] Test addition or update
 
 ## Testing
-- [ ] Added tests for new functionality
+- [ ] Added tests for new functionality (required for new features)
+- [ ] Added tests for bug fixes (required for bug fixes)
 - [ ] All existing tests pass
 - [ ] Tested manually with various query types
 - [ ] Tested edge cases mentioned in the code
+- [ ] New tests cover the specific changes made
 
 ## Checklist
 - [ ] Code follows the project's style guidelines

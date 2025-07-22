@@ -82,10 +82,19 @@ The project has **97 test cases** covering:
 - ✅ Edge cases and error handling
 
 ### Adding New Tests
-1. Create test files in `src/test/unit/`
-2. Follow the existing test patterns
-3. Test both success and error cases
-4. Include edge cases and complex scenarios
+**Required for all contributions:**
+1. **New Features**: Must include tests for new functionality
+2. **Bug Fixes**: Must include tests that reproduce and fix the bug
+3. **Edge Cases**: Test boundary conditions and error scenarios
+4. **Integration**: Test how changes affect existing functionality
+
+**Test Guidelines:**
+- Create test files in `src/test/unit/`
+- Follow the existing test patterns
+- Test both success and error cases
+- Include edge cases and complex scenarios
+- Ensure tests are descriptive and maintainable
+- Test the specific changes you made
 
 Example test structure:
 ```typescript
@@ -113,8 +122,10 @@ git checkout -b feature/your-feature-name
 
 ### 2. Make Your Changes
 - Follow the existing code style
-- Add tests for new functionality
+- **Add tests for new functionality (required)**
+- **Add tests for bug fixes (required)**
 - Update documentation if needed
+- Ensure all existing tests still pass
 
 ### 3. Test Your Changes
 ```bash
