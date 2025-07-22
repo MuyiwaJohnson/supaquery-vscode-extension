@@ -1,10 +1,20 @@
 import * as vscode from 'vscode';
 import { SupabaseQueryParser } from './parser';
 import { EnhancedTranslator } from './enhanced-translator';
+import { TranslationWebviewProvider } from './webview-provider';
 
 export function activate(context: vscode.ExtensionContext) {
   const parser = new SupabaseQueryParser();
   const enhancedTranslator = new EnhancedTranslator();
+  
+  // Register webview provider
+  const webviewProvider = new TranslationWebviewProvider(context.extensionUri);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(
+      TranslationWebviewProvider.viewType,
+      webviewProvider
+    )
+  );
   
   // Register hover provider for SQL translation......
   const hoverProvider = vscode.languages.registerHoverProvider(
@@ -57,7 +67,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
   
   // Register command for translating selected query
-  const translateCommand = vscode.commands.registerCommand('supabase-query-translator.translateQuery', () => {
+  const translateCommand = vscode.commands.registerCommand('supabase-query-translator.translateQuery', async () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
       vscode.window.showWarningMessage('No active editor found');
@@ -73,29 +83,29 @@ export function activate(context: vscode.ExtensionContext) {
     }
     
     try {
-      const result = parser.parseComplexQuery(selectedText);
-      
-      if (result.error) {
-        vscode.window.showErrorMessage(`Translation failed: ${result.error}`);
-        return;
-      }
-      
-      // Show the SQL in a new document
-      const sqlDocument = vscode.workspace.openTextDocument({
-        content: result.sql,
-        language: 'sql'
+      // Show progress
+      await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: "Translating Supabase query...",
+        cancellable: false
+      }, async (progress) => {
+        progress.report({ increment: 0 });
+        
+        // Use the enhanced translator for full translation
+        const result = await enhancedTranslator.fullTranslation(selectedText);
+        
+        progress.report({ increment: 100 });
+        
+        // Show result in webview (will open in split view)
+        await webviewProvider.translateAndShow(selectedText);
+        
+        // Show warnings if any
+        if (result.warnings && result.warnings.length > 0) {
+          vscode.window.showWarningMessage(
+            `Query translated with warnings:\n${result.warnings.join('\n')}`
+          );
+        }
       });
-      
-      sqlDocument.then(doc => {
-        vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
-      });
-      
-      // Show warnings if any
-      if (result.warnings && result.warnings.length > 0) {
-        vscode.window.showWarningMessage(
-          `Query translated with warnings:\n${result.warnings.join('\n')}`
-        );
-      }
       
     } catch (error) {
       vscode.window.showErrorMessage(
@@ -423,9 +433,56 @@ ${result.supabaseJs || 'N/A'}`;
   });
   
   // Register all disposables
+  // Register command for translating in split view
+  const translateInSplitCommand = vscode.commands.registerCommand('supabase-query-translator.translateInSplit', async () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showWarningMessage('No active editor found');
+      return;
+    }
+    
+    const selection = editor.selection;
+    const selectedText = editor.document.getText(selection);
+    
+    if (!selectedText.trim()) {
+      vscode.window.showWarningMessage('Please select a Supabase query to translate');
+      return;
+    }
+    
+    try {
+      // Show progress
+      await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: "Translating Supabase query...",
+        cancellable: false
+      }, async (progress) => {
+        progress.report({ increment: 0 });
+        
+        // Use the enhanced translator for full translation
+        const result = await enhancedTranslator.fullTranslation(selectedText);
+        
+        progress.report({ increment: 100 });
+        
+        // Show result in webview (will open in split view)
+        await webviewProvider.translateAndShow(selectedText);
+        
+        // Show warnings if any
+        if (result.warnings && result.warnings.length > 0) {
+          vscode.window.showWarningMessage(
+            `Query translated with warnings:\n${result.warnings.join('\n')}`
+          );
+        }
+      });
+      
+    } catch (error) {
+      vscode.window.showErrorMessage(`Translation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  });
+
   context.subscriptions.push(
     hoverProvider,
     translateCommand,
+    translateInSplitCommand,
     showHoverCommand,
     translateToHttpCommand,
     translateToCurlCommand,

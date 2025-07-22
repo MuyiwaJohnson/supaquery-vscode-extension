@@ -1,0 +1,50 @@
+/* VS Code Theme Integration */
+:root {
+    /* Use VS Code theme variables */
+    --vscode-font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+    --vscode-font-size: var(--vscode-font-size, 13px);
+    --vscode-foreground: var(--vscode-foreground, #cccccc);
+    --vscode-background: var(--vscode-background, #1e1e1e);
+    --vscode-editor-background: var(--vscode-editor-background, #1e1e1e);
+    --vscode-panel-background: var(--vscode-panel-background, #252526);
+    --vscode-panel-border: var(--vscode-panel-border, #3c3c3c);
+    --vscode-descriptionForeground: var(--vscode-descriptionForeground, #cccccc80);
+    --vscode-button-background: var(--vscode-button-background, #0e639c);
+    --vscode-button-foreground: var(--vscode-button-foreground, #ffffff);
+    --vscode-button-hoverBackground: var(--vscode-button-hoverBackground, #1177bb);
+    --vscode-toolbar-hoverBackground: var(--vscode-toolbar-hoverBackground, #2a2d2e);
+    --vscode-errorForeground: var(--vscode-errorForeground, #f48771);
+    --vscode-warningForeground: var(--vscode-warningForeground, #cca700);
+    --vscode-inputValidation-errorBackground: var(--vscode-inputValidation-errorBackground, #5a1d1d);
+    --vscode-inputValidation-errorBorder: var(--vscode-inputValidation-errorBorder, #be1100);
+    --vscode-inputValidation-warningBackground: var(--vscode-inputValidation-warningBackground, #5a4c1d);
+    --vscode-inputValidation-warningBorder: var(--vscode-inputValidation-warningBorder, #b89500);
+    --vscode-editor-font-family: var(--vscode-editor-font-family, 'Consolas', 'Monaco', 'Courier New', monospace);
+}
+
+/* Dark theme overrides */
+[data-vscode-theme-kind="vscode-dark"] {
+    --vscode-foreground: #cccccc;
+    --vscode-background: #1e1e1e;
+    --vscode-editor-background: #1e1e1e;
+    --vscode-panel-background: #252526;
+    --vscode-panel-border: #3c3c3c;
+}
+
+/* Light theme overrides */
+[data-vscode-theme-kind="vscode-light"] {
+    --vscode-foreground: #616161;
+    --vscode-background: #ffffff;
+    --vscode-editor-background: #ffffff;
+    --vscode-panel-background: #f3f3f3;
+    --vscode-panel-border: #e7e7e7;
+}
+
+/* High contrast theme overrides */
+[data-vscode-theme-kind="vscode-high-contrast"] {
+    --vscode-foreground: #ffffff;
+    --vscode-background: #000000;
+    --vscode-editor-background: #000000;
+    --vscode-panel-background: #000000;
+    --vscode-panel-border: #ffffff;
+} 

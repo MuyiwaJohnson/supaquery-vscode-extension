@@ -1,0 +1,1 @@
+export { HtmlTemplate, type HtmlTemplateProps } from './HtmlTemplate'; 

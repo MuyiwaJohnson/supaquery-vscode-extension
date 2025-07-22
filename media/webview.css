@@ -1,0 +1,294 @@
+/* Webview Styles */
+body {
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+    color: var(--vscode-foreground);
+    background: var(--vscode-editor-background);
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    height: 100vh;
+    min-width: 600px;
+    background-image: 
+        radial-gradient(circle at 25% 25%, rgba(255,255,255,0.02) 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, rgba(255,255,255,0.02) 0%, transparent 50%);
+}
+
+.container {
+    max-width: 600px;
+    width: 600px;
+    margin: 0 auto;
+    padding: 12px;
+    min-height: 100vh;
+    overflow-y: auto;
+}
+
+/* Header - Removed for cleaner look */
+
+/* Empty State */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--vscode-descriptionForeground);
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--vscode-foreground);
+}
+
+.empty-state p {
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* Result Container */
+.result-container {
+    max-width: 100%;
+    width: 100%;
+}
+
+/* Result Card */
+.result-card {
+    background: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+.result-card.error {
+    border-color: var(--vscode-errorForeground);
+}
+
+.result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: var(--vscode-panel-background);
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.result-header h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    margin: 0;
+}
+
+.timestamp {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+}
+
+.result-content {
+    padding: 20px;
+}
+
+/* Code Block */
+.code-block {
+    background: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    width: 100%;
+}
+
+.code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--vscode-panel-background);
+    border-bottom: 1px solid var(--vscode-panel-border);
+    flex-wrap: nowrap;
+    min-width: 0;
+}
+
+.code-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.language-badge {
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.title-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vscode-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.copy-button {
+    background: none;
+    border: none;
+    padding: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--vscode-descriptionForeground);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    min-width: 32px;
+    min-height: 32px;
+    flex-shrink: 0;
+}
+
+.copy-button:hover {
+    background: var(--vscode-toolbar-hoverBackground);
+    color: var(--vscode-foreground);
+}
+
+.copy-button:active {
+    transform: scale(0.95);
+}
+
+.code-content {
+    position: relative;
+}
+
+.code-content pre {
+    margin: 0 !important;
+    padding: 12px !important;
+    background: var(--vscode-editor-background) !important;
+    border-radius: 0 0 4px 4px !important;
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+    overflow-x: auto;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-width: 100%;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+}
+
+.code-content code {
+    font-family: var(--vscode-editor-font-family) !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Error and Warning Sections */
+.error-section,
+.warnings-section {
+    margin-top: 20px;
+    padding: 16px;
+    border-radius: 6px;
+}
+
+.error-section {
+    background: var(--vscode-inputValidation-errorBackground);
+    border: 1px solid var(--vscode-inputValidation-errorBorder);
+}
+
+.error-section h4 {
+    color: var(--vscode-errorForeground);
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.error-message {
+    color: var(--vscode-errorForeground);
+    font-family: var(--vscode-editor-font-family);
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    margin: 0;
+}
+
+.warnings-section {
+    background: var(--vscode-inputValidation-warningBackground);
+    border: 1px solid var(--vscode-inputValidation-warningBorder);
+}
+
+.warnings-section h4 {
+    color: var(--vscode-warningForeground);
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.warnings-list {
+    color: var(--vscode-warningForeground);
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0;
+    padding-left: 20px;
+}
+
+.warnings-list li {
+    margin-bottom: 4px;
+}
+
+/* Responsive */
+@media (max-width: 650px) {
+    .container {
+        max-width: 100%;
+        width: 100%;
+        padding: 10px;
+    }
+    
+    .result-header {
+        flex-direction: row;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .code-header {
+        flex-direction: row;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: nowrap;
+    }
+    
+    .code-title {
+        min-width: 0;
+        flex: 1;
+    }
+    
+    .title-text {
+        font-size: 12px;
+    }
+    
+    .copy-button {
+        min-width: 28px;
+        min-height: 28px;
+        font-size: 14px;
+    }
+} 
