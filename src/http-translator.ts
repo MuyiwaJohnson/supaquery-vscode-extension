@@ -573,7 +573,9 @@ export class HttpTranslator {
       condition = condition.trim();
       
       // Skip empty conditions
-      if (!condition) return;
+      if (!condition) {
+        return;
+      }
       
       // Handle different operators
       if (condition.includes('=')) {

@@ -23,7 +23,7 @@ import { AstParser } from './ast-parser';
  */
 export class SupabaseQueryParser {
   /** Threshold for warning about large LIMIT values that may impact performance */
-  private static readonly LARGE_LIMIT_THRESHOLD = 1000;
+  private static readonly largeLimitThreshold = 1000;
   
   /** Visitor pattern implementation for parsing method chains */
   private visitor: QueryVisitor;
@@ -116,7 +116,7 @@ export class SupabaseQueryParser {
       warnings.push('DELETE query without WHERE clause will delete all rows');
     }
     
-    if (queryNode.limit && queryNode.limit > SupabaseQueryParser.LARGE_LIMIT_THRESHOLD) {
+    if (queryNode.limit && queryNode.limit > SupabaseQueryParser.largeLimitThreshold) {
       warnings.push('Large LIMIT value may impact performance');
     }
     

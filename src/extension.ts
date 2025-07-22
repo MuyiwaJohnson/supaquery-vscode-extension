@@ -22,7 +22,9 @@ export function activate(context: vscode.ExtensionContext) {
     {
       provideHover(document, position, token) {
         const range = document.getWordRangeAtPosition(position);
-        if (!range) return null;
+        if (!range) {
+          return null;
+        }
         
         const word = document.getText(range);
         
