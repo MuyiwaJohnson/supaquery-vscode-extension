@@ -138,59 +138,23 @@ Quick start:
 - [x] HTTP and cURL generation for all operations
 - [x] Advanced filtering and joins support
 
-### 🔧 Edge Cases & Improvements
-- [ ] **Dynamic Query Support**: Runtime query building with variables
-- [ ] **Ternary Operators**: Conditional expressions in `.select()` statements
-- [ ] **Template Literals**: Complex template expressions and interpolation
-- [ ] **Nested Subqueries**: Support for complex subquery patterns
-- [ ] **Window Functions**: PostgreSQL window functions (ROW_NUMBER, RANK, etc.)
-- [ ] **CTEs (Common Table Expressions)**: WITH clause support
-- [ ] **Stored Procedures**: Enhanced RPC call support
-- [ ] **Circular References**: Handle objects with circular dependencies
-- [ ] **Multi-line Strings**: Complex multi-line string literals
-- [ ] **Special Characters**: Better handling of special characters in table/column names
+### 🔧 Achievable Improvements
+- [ ] **Better Error Messages**: More descriptive error messages for common issues
+- [ ] **Query Validation**: Basic syntax validation before translation
+- [ ] **Copy All Results**: Button to copy all translations at once
+- [ ] **Result Persistence**: Save results between VS Code sessions
+- [ ] **Keyboard Shortcuts**: Additional shortcuts for common actions
+- [ ] **Theme Integration**: Better dark/light theme support
+- [ ] **Export Options**: Export results to file (JSON, markdown)
 
-### 🗄️ Schema & Validation
-- [ ] **Schema Introspection**: Connect to actual database for validation
-- [ ] **Column Validation**: Verify columns exist in target tables
-- [ ] **Relationship Validation**: Check foreign key relationships
-- [ ] **Type Safety**: Runtime type checking and validation
-- [ ] **RLS Policy Awareness**: Account for Row Level Security in translations
+### 🛠️ Technical Enhancements
+- [ ] **Performance Optimization**: Faster parsing for large queries
+- [ ] **Memory Management**: Reduce memory usage for complex queries
+- [ ] **Error Recovery**: Better handling of malformed queries
+- [ ] **Test Coverage**: Increase test coverage to 95%+
+- [ ] **Documentation**: More examples and use cases
+- [ ] **TypeScript Types**: Better type definitions for contributors
 
-### 🔐 Authentication & Security
-- [ ] **Authentication Headers**: Include auth headers in HTTP/cURL generation
-- [ ] **Custom Headers**: Support for custom Supabase headers
-- [ ] **API Key Management**: Secure API key handling
-- [ ] **Environment Variables**: Support for different environments (dev/staging/prod)
-
-### 🎨 User Experience
-- [ ] **SQL Formatting**: Prettier-like SQL formatting options
-- [ ] **Export Options**: Export to different SQL dialects (MySQL, SQLite, etc.)
-- [ ] **Query History**: Save and manage translation history
-- [ ] **Favorites**: Bookmark frequently used queries
-- [ ] **Dark/Light Theme**: Better theme integration
-- [ ] **Customizable Shortcuts**: User-defined keyboard shortcuts
-
-### 📊 Performance & Analysis
-- [ ] **Query Performance Analysis**: Identify potential performance issues
-- [ ] **Query Optimization Suggestions**: Provide optimization recommendations
-- [ ] **Execution Plan**: Show estimated query execution plans
-- [ ] **Memory Usage Optimization**: Reduce memory footprint for large queries
-- [ ] **Caching**: Cache frequently translated queries
-
-### 🔗 Integration & Extensions
-- [ ] **Supabase CLI Integration**: Work with Supabase CLI projects
-- [ ] **Database Connection**: Direct database connection for validation
-- [ ] **Migration Support**: Generate migration files from queries
-- [ ] **API Documentation**: Auto-generate API documentation
-- [ ] **Testing Framework**: Generate test cases from queries
-
-### 🌐 Advanced Translations
-- [ ] **GraphQL**: Translate to GraphQL queries
-- [ ] **Prisma**: Generate Prisma query syntax
-- [ ] **TypeORM**: Generate TypeORM query syntax
-- [ ] **Sequelize**: Generate Sequelize query syntax
-- [ ] **Multiple Output Formats**: Export to JSON, YAML, etc.
 
 ## License
 
