@@ -1,5 +1,13 @@
 import { SupabaseQueryParser } from './parser';
-import { processSql, renderSupabaseJs, renderHttp, formatCurl } from '@supabase/sql-to-rest';
+// Dynamic import for ES module compatibility
+let sqlToRest: any = null;
+
+async function getSqlToRest() {
+  if (!sqlToRest) {
+    sqlToRest = await import('@supabase/sql-to-rest');
+  }
+  return sqlToRest;
+}
 import { HttpTranslator } from './http-translator';
 
 /**
@@ -172,6 +180,7 @@ export class EnhancedTranslator {
     try {
       // For SELECT queries, we can still use sql-to-rest for better compatibility
       if (sql.toUpperCase().startsWith('SELECT')) {
+        const { processSql, renderHttp } = await getSqlToRest();
         const processed = await processSql(sql);
         const http = await renderHttp(processed);
         
@@ -215,6 +224,7 @@ export class EnhancedTranslator {
     try {
       // For SELECT queries, we can still use sql-to-rest for better compatibility
       if (sql.toUpperCase().startsWith('SELECT')) {
+        const { processSql, renderHttp, formatCurl } = await getSqlToRest();
         const processed = await processSql(sql);
         const http = await renderHttp(processed);
         const curl = formatCurl(baseUrl, http);
@@ -268,6 +278,7 @@ export class EnhancedTranslator {
    */
   async sqlToSupabaseJs(sql: string): Promise<TranslationResult> {
     try {
+      const { processSql, renderSupabaseJs } = await getSqlToRest();
       const processed = await processSql(sql);
       const supabaseJs = await renderSupabaseJs(processed);
       
