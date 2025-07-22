@@ -83,29 +83,11 @@ export function activate(context: vscode.ExtensionContext) {
     }
     
     try {
-      // Show progress
-      await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: "Translating Supabase query...",
-        cancellable: false
-      }, async (progress) => {
-        progress.report({ increment: 0 });
-        
-        // Use the enhanced translator for full translation
-        const result = await enhancedTranslator.fullTranslation(selectedText);
-        
-        progress.report({ increment: 100 });
-        
-        // Show result in webview (will open in split view)
-        await webviewProvider.translateAndShow(selectedText);
-        
-        // Show warnings if any
-        if (result.warnings && result.warnings.length > 0) {
-          vscode.window.showWarningMessage(
-            `Query translated with warnings:\n${result.warnings.join('\n')}`
-          );
-        }
-      });
+      // Use the enhanced translator for full translation
+      const result = await enhancedTranslator.fullTranslation(selectedText);
+      
+      // Show result in webview (will open in split view)
+      await webviewProvider.translateAndShow(selectedText);
       
     } catch (error) {
       vscode.window.showErrorMessage(
@@ -450,29 +432,11 @@ ${result.supabaseJs || 'N/A'}`;
     }
     
     try {
-      // Show progress
-      await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: "Translating Supabase query...",
-        cancellable: false
-      }, async (progress) => {
-        progress.report({ increment: 0 });
-        
-        // Use the enhanced translator for full translation
-        const result = await enhancedTranslator.fullTranslation(selectedText);
-        
-        progress.report({ increment: 100 });
-        
-        // Show result in webview (will open in split view)
-        await webviewProvider.translateAndShow(selectedText);
-        
-        // Show warnings if any
-        if (result.warnings && result.warnings.length > 0) {
-          vscode.window.showWarningMessage(
-            `Query translated with warnings:\n${result.warnings.join('\n')}`
-          );
-        }
-      });
+      // Use the enhanced translator for full translation
+      const result = await enhancedTranslator.fullTranslation(selectedText);
+      
+      // Show result in webview (will open in split view)
+      await webviewProvider.translateAndShow(selectedText);
       
     } catch (error) {
       vscode.window.showErrorMessage(`Translation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);

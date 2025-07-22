@@ -297,12 +297,30 @@ export class EnhancedTranslator {
         return sqlResult;
       }
 
-      // Step 2: SQL → HTTP/cURL/Supabase JS
-      const [httpResult, curlResult, supabaseJsResult] = await Promise.allSettled([
-        this.sqlToHttp(sqlResult.sql),
-        this.sqlToCurl(sqlResult.sql, baseUrl),
-        this.sqlToSupabaseJs(sqlResult.sql)
-      ]);
+      // Step 2: Determine translation approach based on SQL type
+      const isSelectQuery = sqlResult.sql.toUpperCase().startsWith('SELECT');
+      
+      let httpResult, curlResult, supabaseJsResult;
+      
+      if (isSelectQuery) {
+        // For SELECT queries, use sql-to-rest library
+        [httpResult, curlResult, supabaseJsResult] = await Promise.allSettled([
+          this.sqlToHttp(sqlResult.sql),
+          this.sqlToCurl(sqlResult.sql, baseUrl),
+          this.sqlToSupabaseJs(sqlResult.sql)
+        ]);
+      } else {
+        // For non-SELECT queries (INSERT, UPDATE, DELETE), use our custom translator
+        const customHttpResult = await this.translateToHttp(supabaseQuery);
+        const customCurlResult = await this.translateToCurl(supabaseQuery, baseUrl);
+        
+        httpResult = { status: 'fulfilled' as const, value: customHttpResult };
+        curlResult = { status: 'fulfilled' as const, value: customCurlResult };
+        supabaseJsResult = { 
+          status: 'rejected' as const, 
+          reason: 'Supabase JS generation not supported for non-SELECT queries (sql-to-rest limitation)' 
+        };
+      }
 
       return {
         original: supabaseQuery,
@@ -310,8 +328,11 @@ export class EnhancedTranslator {
         http: httpResult.status === 'fulfilled' ? httpResult.value.http : undefined,
         curl: curlResult.status === 'fulfilled' ? curlResult.value.curl : undefined,
         supabaseJs: supabaseJsResult.status === 'fulfilled' ? supabaseJsResult.value.supabaseJs : undefined,
-        warnings: sqlResult.warnings,
-        error: httpResult.status === 'rejected' || curlResult.status === 'rejected' || supabaseJsResult.status === 'rejected' 
+        warnings: [
+          ...(sqlResult.warnings || []),
+          ...(supabaseJsResult.status === 'rejected' ? [supabaseJsResult.reason] : [])
+        ],
+        error: httpResult.status === 'rejected' || curlResult.status === 'rejected'
           ? 'Some translations failed' 
           : undefined
       };

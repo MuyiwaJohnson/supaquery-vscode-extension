@@ -38,6 +38,9 @@ export class HtmlTemplate {
     <script>
         const vscode = acquireVsCodeApi();
         
+        // Store code blocks for copying
+        let codeBlocks = {};
+        
         // Restore state if available
         const currentResult = ${currentResultJson};
         if (currentResult) {
@@ -62,6 +65,9 @@ export class HtmlTemplate {
 
         function showResult(result) {
             const container = document.getElementById('resultContainer');
+            
+            // Clear previous code blocks
+            codeBlocks = {};
             
             if (!result.success) {
                 container.innerHTML = \`
@@ -92,26 +98,51 @@ export class HtmlTemplate {
                 return;
             }
 
-            container.innerHTML = \`
+            let htmlContent = \`
                 <div class="result-card">
                     <div class="result-header">
                         <h2>✅ Translation Complete</h2>
                         <span class="timestamp">\${new Date().toLocaleTimeString()}</span>
                     </div>
                     <div class="result-content">
-                        \${result.sql ? createCodeBlock('sql', result.sql, 'Generated SQL') : ''}
-                        \${result.http ? createCodeBlock('http', formatHttpRequest(result.http), 'HTTP Request') : ''}
-                        \${result.curl ? createCodeBlock('bash', result.curl, 'cURL Command') : ''}
-                        \${result.warnings && result.warnings.length > 0 ? createWarningsSection(result.warnings) : ''}
+            \`;
+
+            // Store code blocks and generate HTML
+            if (result.sql) {
+                const blockId = 'sql_block';
+                codeBlocks[blockId] = result.sql;
+                htmlContent += createCodeBlock('sql', result.sql, 'Generated SQL', blockId);
+            }
+
+            if (result.http) {
+                const blockId = 'http_block';
+                const formattedHttp = formatHttpRequest(result.http);
+                codeBlocks[blockId] = formattedHttp;
+                htmlContent += createCodeBlock('http', formattedHttp, 'HTTP Request', blockId);
+            }
+
+            if (result.curl) {
+                const blockId = 'curl_block';
+                codeBlocks[blockId] = result.curl;
+                htmlContent += createCodeBlock('bash', result.curl, 'cURL Command', blockId);
+            }
+
+            if (result.warnings && result.warnings.length > 0) {
+                htmlContent += createWarningsSection(result.warnings);
+            }
+
+            htmlContent += \`
                     </div>
                 </div>
             \`;
+
+            container.innerHTML = htmlContent;
 
             // Apply syntax highlighting
             Prism.highlightAll();
         }
 
-        function createCodeBlock(language, code, title) {
+        function createCodeBlock(language, code, title, blockId) {
             const languageLabel = {
                 'javascript': 'JS',
                 'sql': 'SQL',
@@ -129,8 +160,8 @@ export class HtmlTemplate {
                             <span class="language-badge">\${languageLabel}</span>
                             <span class="title-text">\${title}</span>
                         </div>
-                        <button class="copy-button" onclick="copyToClipboard('\${escapeHtml(formattedCode)}', '\${title}')" title="Copy to clipboard">
-                            📋
+                        <button class="copy-button" onclick="copyToClipboard('\${blockId}', '\${title}')" title="Copy to clipboard">
+                            Copy
                         </button>
                     </div>
                     <div class="code-content">
@@ -139,8 +170,6 @@ export class HtmlTemplate {
                 </div>
             \`;
         }
-
-
 
         function formatHttpRequest(http) {
             let result = \`\${http.method} \${http.fullPath}\`;
@@ -182,6 +211,7 @@ export class HtmlTemplate {
 
         function clearResult() {
             const container = document.getElementById('resultContainer');
+            codeBlocks = {};
             container.innerHTML = \`
                 <div class="empty-state">
                     <div class="empty-icon">📄</div>
@@ -191,8 +221,13 @@ export class HtmlTemplate {
             \`;
         }
 
-        async function copyToClipboard(text, title) {
+        async function copyToClipboard(blockId, title) {
             try {
+                const text = codeBlocks[blockId];
+                if (!text) {
+                    throw new Error('Code block not found');
+                }
+                
                 // Use VS Code's clipboard API instead of navigator.clipboard
                 vscode.postMessage({ 
                     command: 'copy', 
@@ -203,7 +238,7 @@ export class HtmlTemplate {
                 // Show visual feedback
                 const button = event.target;
                 const originalText = button.innerHTML;
-                button.innerHTML = '✅';
+                button.innerHTML = 'Copied';
                 button.style.color = '#4CAF50';
                 
                 setTimeout(() => {
@@ -229,4 +264,4 @@ export class HtmlTemplate {
 </body>
 </html>`;
     }
-} 
+}
