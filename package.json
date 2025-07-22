@@ -1,7 +1,7 @@
 {
-  "name": "supabase-query-translator",
-  "displayName": "Supabase Query Translator",
-  "description": "Translate Supabase JavaScript queries to SQL in real-time",
+  "name": "supaquery",
+  "displayName": "SupaQuery",
+  "description": "Translate Supabase JavaScript queries to SQL, HTTP, and cURL in real-time",
   "version": "0.1.0",
   "engines": {
     "vscode": "^1.74.0"
@@ -17,77 +17,22 @@
   "contributes": {
     "commands": [
       {
-        "command": "supabase-query-translator.translateQuery",
-        "title": "Translate Supabase Query to SQL",
-        "category": "Supabase Query Translator"
-      },
-      {
-        "command": "supabase-query-translator.translateInSplit",
-        "title": "Translate Supabase Query (Split View)",
-        "category": "Supabase Query Translator"
-      },
-      {
-        "command": "supabase-query-translator.showHover",
-        "title": "Show SQL Translation",
-        "category": "Supabase Query Translator"
-      },
-      {
-        "command": "supabase-query-translator.translateToHttp",
-        "title": "Translate to HTTP Request",
-        "category": "Supabase Query Translator"
-      },
-      {
-        "command": "supabase-query-translator.translateToCurl",
-        "title": "Translate to cURL Command",
-        "category": "Supabase Query Translator"
-      },
-      {
-        "command": "supabase-query-translator.roundTrip",
-        "title": "Round-trip Translation (Supabase JS → SQL → Supabase JS)",
-        "category": "Supabase Query Translator"
-      },
-      {
-        "command": "supabase-query-translator.fullTranslation",
-        "title": "Full Translation (All Formats)",
-        "category": "Supabase Query Translator"
+        "command": "supaquery.translateQuery",
+        "title": "Translate Supabase Query",
+        "category": "SupaQuery"
       }
     ],
     "keybindings": [
       {
-        "command": "supabase-query-translator.translateQuery",
+        "command": "supaquery.translateQuery",
         "key": "ctrl+shift+t",
         "mac": "cmd+shift+t"
-      },
-      {
-        "command": "supabase-query-translator.translateToHttp",
-        "key": "ctrl+shift+h",
-        "mac": "cmd+shift+h"
-      },
-      {
-        "command": "supabase-query-translator.translateToCurl",
-        "key": "ctrl+shift+c",
-        "mac": "cmd+shift+c"
-      },
-      {
-        "command": "supabase-query-translator.roundTrip",
-        "key": "ctrl+shift+r",
-        "mac": "cmd+shift+r"
-      },
-      {
-        "command": "supabase-query-translator.fullTranslation",
-        "key": "ctrl+shift+f",
-        "mac": "cmd+shift+f"
       }
     ],
     "menus": {
       "editor/context": [
         {
-          "command": "supabase-query-translator.translateInSplit",
-          "group": "navigation",
-          "when": "editorLangId == javascript || editorLangId == typescript"
-        },
-        {
-          "command": "supabase-query-translator.translateQuery",
+          "command": "supaquery.translateQuery",
           "group": "navigation",
           "when": "editorLangId == javascript || editorLangId == typescript"
         }
@@ -96,16 +41,16 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "supabase-translator",
-          "title": "Supabase Translator",
+          "id": "supaquery",
+          "title": "SupaQuery",
           "icon": "media/icon.svg"
         }
       ]
     },
     "views": {
-      "supabase-translator": [
+      "supaquery": [
         {
-          "id": "supabaseTranslator.results",
+          "id": "supaquery.results",
           "name": "Translation Results",
           "type": "webview"
         }

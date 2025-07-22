@@ -18,13 +18,13 @@ body {
 .container {
     max-width: 600px;
     width: 600px;
-    margin: 0 auto;
+    margin: 20px auto 0;
     padding: 12px;
     min-height: 100vh;
     overflow-y: auto;
 }
 
-/* Header - Removed for cleaner look */
+
 
 /* Empty State */
 .empty-state {
@@ -141,7 +141,7 @@ body {
 }
 
 .title-text {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 500;
     color: var(--vscode-foreground);
     white-space: nowrap;
@@ -185,7 +185,7 @@ body {
     padding: 12px !important;
     background: var(--vscode-editor-background) !important;
     border-radius: 0 0 4px 4px !important;
-    font-size: 13px !important;
+    font-size: 14px !important;
     line-height: 1.5 !important;
     overflow-x: auto;
     overflow-wrap: break-word;
@@ -198,7 +198,7 @@ body {
 
 .code-content code {
     font-family: var(--vscode-editor-font-family) !important;
-    font-size: 14px !important;
+    font-size: 15px !important;
     line-height: 1.5 !important;
     word-break: break-word;
     overflow-wrap: break-word;

@@ -1,5 +1,5 @@
 import { Project, SourceFile, CallExpression, Node, SyntaxKind, StringLiteral, ObjectLiteralExpression, ArrayLiteralExpression, PropertyAssignment, Identifier } from 'ts-morph';
-import { QueryNode, WhereClause, ParserContext } from './types';
+import { QueryNode, WhereClause } from './types';
 
 /**
  * AST (Abstract Syntax Tree) parser for Supabase JavaScript queries.

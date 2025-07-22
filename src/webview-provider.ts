@@ -3,12 +3,14 @@ import { EnhancedTranslator } from './enhanced-translator';
 import { HtmlTemplate } from './webview/components';
 
 export class TranslationWebviewProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'supabaseTranslator.results';
+  public static readonly viewType = 'supaquery.results';
 
     private _view?: vscode.WebviewView;
     private _translator: EnhancedTranslator;
     private _currentPanel?: vscode.WebviewPanel;
     private _currentResult: any = null;
+    private _documentChangeListener?: vscode.Disposable;
+    private _debounceTimer?: NodeJS.Timeout;
 
     constructor(private readonly _extensionUri: vscode.Uri) {
         this._translator = new EnhancedTranslator();
@@ -85,7 +87,11 @@ export class TranslationWebviewProvider implements vscode.WebviewViewProvider {
         panel.onDidDispose(() => {
             this._currentPanel = undefined;
             this._currentResult = null;
+            this._stopRealtimeTranslation();
         });
+
+        // Start real-time translation when panel is created
+        this._startRealtimeTranslation();
 
         // Handle messages from the panel
         panel.webview.onDidReceiveMessage(
@@ -122,6 +128,139 @@ export class TranslationWebviewProvider implements vscode.WebviewViewProvider {
                 command: 'clearResult'
             });
         }
+    }
+
+    private _startRealtimeTranslation() {
+        // Stop any existing listener
+        this._stopRealtimeTranslation();
+
+        // Listen for document changes
+        this._documentChangeListener = vscode.workspace.onDidChangeTextDocument(event => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor || editor.document !== event.document) return;
+
+            // Check if the change is in a Supabase query
+            const changes = event.contentChanges;
+            for (const change of changes) {
+                const line = event.document.lineAt(change.range.start.line);
+                const lineText = line.text;
+                
+                if (this._isSupabaseQuery(lineText)) {
+                    // Debounce the translation
+                    if (this._debounceTimer) {
+                        clearTimeout(this._debounceTimer);
+                    }
+                    
+                    this._debounceTimer = setTimeout(() => {
+                        this._handleRealtimeTranslation(lineText);
+                    }, 500);
+                    
+                    break;
+                }
+            }
+        });
+    }
+
+    private _stopRealtimeTranslation() {
+        if (this._documentChangeListener) {
+            this._documentChangeListener.dispose();
+            this._documentChangeListener = undefined;
+        }
+        
+        if (this._debounceTimer) {
+            clearTimeout(this._debounceTimer);
+            this._debounceTimer = undefined;
+        }
+    }
+
+    private _isSupabaseQuery(lineText: string): boolean {
+        return lineText.includes('supabase.from(') || 
+               lineText.includes('supabase.rpc(') ||
+               lineText.includes('.select(') ||
+               lineText.includes('.insert(') ||
+               lineText.includes('.update(') ||
+               lineText.includes('.delete(') ||
+               lineText.includes('.upsert(');
+    }
+
+    private async _handleRealtimeTranslation(lineText: string) {
+        if (!this._currentPanel) return;
+
+        try {
+            const queryText = this._extractQueryFromLine(lineText);
+            if (!queryText.trim()) return;
+
+            const result = await this._translateQuery(queryText);
+            this._currentResult = result;
+            
+            this._currentPanel.webview.postMessage({ 
+                command: 'showResult', 
+                result: result 
+            });
+        } catch (error) {
+            // Silently ignore parsing errors in real-time
+        }
+    }
+
+    private _extractQueryFromLine(lineText: string): string {
+        // Extract the complete query from a line using more sophisticated parsing
+        
+        // Find the start of the query
+        let startIndex = lineText.indexOf('supabase.from(');
+        if (startIndex === -1) {
+            startIndex = lineText.indexOf('supabase.rpc(');
+        }
+        
+        if (startIndex === -1) {
+            // Look for method chains that might be part of a query
+            const methodPatterns = ['.select(', '.insert(', '.update(', '.delete(', '.upsert('];
+            for (const pattern of methodPatterns) {
+                const index = lineText.indexOf(pattern);
+                if (index !== -1) {
+                    startIndex = index;
+                    break;
+                }
+            }
+        }
+        
+        if (startIndex === -1) {
+            return lineText;
+        }
+        
+        // Extract from the start to the end of the line or the next semicolon
+        const endIndex = lineText.indexOf(';', startIndex);
+        const queryEnd = endIndex !== -1 ? endIndex : lineText.length;
+        
+        // Also look for the end of the method chain
+        let chainEnd = queryEnd;
+        let parenCount = 0;
+        let inString = false;
+        let stringChar = '';
+        
+        for (let i = startIndex; i < lineText.length; i++) {
+            const char = lineText[i];
+            
+            if (char === '"' || char === "'") {
+                if (!inString) {
+                    inString = true;
+                    stringChar = char;
+                } else if (char === stringChar) {
+                    inString = false;
+                }
+            } else if (!inString) {
+                if (char === '(') {
+                    parenCount++;
+                } else if (char === ')') {
+                    parenCount--;
+                    if (parenCount === 0) {
+                        chainEnd = i + 1;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        return lineText.substring(startIndex, Math.min(chainEnd, queryEnd)).trim();
     }
 
     private async _translateQuery(query: string) {

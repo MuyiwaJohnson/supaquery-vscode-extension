@@ -317,29 +317,6 @@ export class SupabaseQueryParser {
     return false;
   }
 
-  private hasMalformedJson(queryText: string): boolean {
-    // Look for malformed JSON patterns that are likely to cause issues
-    // Check for unmatched braces in object literals
-    const braceMatches = queryText.match(/\{[^{}]*\}/g);
-    if (braceMatches) {
-      for (const match of braceMatches) {
-        // Skip if it's a valid simple object
-        try {
-          JSON.parse(match);
-        } catch {
-          // Check if it's a common malformed pattern
-          if (match.includes('invalid: json') || 
-              match.includes('undefined:') ||
-              match.includes('null:') ||
-              /[a-zA-Z_$][a-zA-Z0-9_$]*\s*:\s*[^"'\d\[\]{}]/.test(match)) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  }
-
   private parseRpcQuery(queryText: string): ParsedQuery {
     // Extract RPC function name and parameters with better regex
     const rpcMatch = queryText.match(/supabase\.rpc\(['"`]([^'"`]+)['"`],\s*({[^}]+})\)/);
