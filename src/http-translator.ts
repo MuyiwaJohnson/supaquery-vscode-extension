@@ -372,7 +372,9 @@ export class HttpTranslator {
       if (content.startsWith('[') && content.endsWith(']')) {
         // For arrays, we need to parse each object individually
         const arrayContent = content.slice(1, -1).trim();
-        if (!arrayContent) return [];
+        if (!arrayContent) {
+          return [];
+        }
         
         // Split by object boundaries (this is a simplified approach)
         const objects = [];
@@ -1075,7 +1077,9 @@ export class HttpTranslator {
       const value = pair.substring(colonIndex + 1).trim();
       
       // Skip if key is empty or malformed, or if we already handled it
-      if (!key || key.includes('{') || result.hasOwnProperty(key)) continue;
+      if (!key || key.includes('{') || result.hasOwnProperty(key)) {
+        continue;
+      }
       
       // Handle different value types
       if (value.startsWith('[') && value.endsWith(']')) {

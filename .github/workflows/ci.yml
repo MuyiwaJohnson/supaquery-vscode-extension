@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [16.x, 18.x, 20.x]
+        node-version: [18.x, 20.x]
 
     steps:
     - uses: actions/checkout@v4
@@ -29,11 +29,14 @@ jobs:
     - name: Compile TypeScript
       run: npm run compile
 
+    - name: Run linting
+      run: npm run lint
+
     - name: Run unit tests
       run: npm run test:unit
 
-    - name: Run linting
-      run: npm run lint || true
+    - name: Run integration tests
+      run: npm run test:integration
 
   build:
     runs-on: ubuntu-latest
@@ -45,7 +48,7 @@ jobs:
     - name: Use Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18.x'
+        node-version: '20.x'
         cache: 'npm'
 
     - name: Install dependencies
@@ -56,8 +59,6 @@ jobs:
 
     - name: Package extension
       run: npx vsce package --no-yarn
-      env:
-        VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
     - name: Upload extension artifact
       uses: actions/upload-artifact@v4

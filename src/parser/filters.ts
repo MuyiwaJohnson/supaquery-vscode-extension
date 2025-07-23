@@ -127,8 +127,12 @@ export class FilterParser {
     }
     
     // Try to parse as boolean
-    if (valueStr === 'true') return true;
-    if (valueStr === 'false') return false;
+    if (valueStr === 'true') {
+      return true;
+    }
+    if (valueStr === 'false') {
+      return false;
+    }
     
     // Handle quoted strings
     if ((valueStr.startsWith('"') && valueStr.endsWith('"')) ||
