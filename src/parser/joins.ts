@@ -118,7 +118,7 @@ export class JoinParser {
     return [tableName, columnList];
   }
 
-  private createJoinClause(tableName: string): JoinClause {
+  public createJoinClause(tableName: string): JoinClause {
     // Assume foreign key relationship: {tableName}.{tableName}_id = {currentTable}.id
     const foreignKey = `${tableName}_id`;
     

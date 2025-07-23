@@ -62,7 +62,13 @@ export class SupabaseQueryParser {
    */
   parseQuery(queryText: string): ParsedQuery {
     try {
-      // Use ts-morph AST parser to extract the method chain
+      // Fast path for simple queries (bypasses heavy AST parsing)
+      const fastResult = this.parseSimpleQuery(queryText);
+      if (fastResult) {
+        return fastResult;
+      }
+
+      // Fallback to full AST parsing for complex queries
       const methodChain = this.astParser.parseQueryText(queryText);
       
       // Parse the method chain into a query node
@@ -84,6 +90,219 @@ export class SupabaseQueryParser {
         error: error instanceof Error ? error.message : 'Unknown parsing error',
         warnings: []
       };
+    }
+  }
+
+  /**
+   * Fast path for simple queries that bypasses heavy AST parsing.
+   * This method uses regex patterns to quickly parse common simple queries.
+   */
+  private parseSimpleQuery(queryText: string): ParsedQuery | null {
+    const trimmed = queryText.trim();
+    
+    // Simple SELECT patterns
+    const selectPattern = /^supabase\.from\(['"`]([^'"`]+)['"`]\)\.select\(['"`]([^'"`]+)['"`]\)$/;
+    const selectMatch = trimmed.match(selectPattern);
+    if (selectMatch) {
+      const [, table, columns] = selectMatch;
+      
+      // Check if this contains JOIN patterns (parentheses or colons)
+      if (columns.includes('(') || columns.includes(':')) {
+        // Fall back to AST parsing for JOINs
+        return null;
+      }
+      
+      // Also check for dot notation in WHERE clauses that might indicate JOINs
+      const hasDotNotation = queryText.includes('.eq(') || 
+                            queryText.includes('.gt(') || 
+                            queryText.includes('.lt(') || 
+                            queryText.includes('.gte(') || 
+                            queryText.includes('.lte(') ||
+                            queryText.includes('.in(') ||
+                            queryText.includes('.like(') ||
+                            queryText.includes('.ilike(');
+      
+      if (hasDotNotation) {
+        // Fall back to AST parsing for queries with dot notation
+        return null;
+      }
+      
+      // Also check for dot notation in the entire query (e.g., posts.published)
+      const hasDotInQuery = queryText.includes('.') && 
+                           (queryText.includes('(') || queryText.includes(')'));
+      
+      if (hasDotInQuery) {
+        // Fall back to AST parsing for queries with dots
+        return null;
+      }
+      
+      // Handle special aggregation cases
+      let processedColumns = columns;
+      if (columns === 'count') {
+        processedColumns = 'COUNT(*)';
+      }
+      
+      const sql = `SELECT ${processedColumns} FROM ${table}`;
+      return {
+        original: queryText,
+        sql,
+        warnings: columns === '*' ? ['Consider selecting specific columns instead of * for better performance'] : []
+      };
+    }
+
+    // Simple SELECT with one filter
+    const selectWithFilterPattern = /^supabase\.from\(['"`]([^'"`]+)['"`]\)\.select\(['"`]([^'"`]+)['"`]\)\.eq\(['"`]([^'"`]+)['"`],\s*['"`]?([^'"`)]+)['"`]?\)$/;
+    const selectWithFilterMatch = trimmed.match(selectWithFilterPattern);
+    if (selectWithFilterMatch) {
+      const [, table, columns, filterColumn, filterValue] = selectWithFilterMatch;
+      
+      // Check if this contains JOIN patterns (parentheses or colons)
+      if (columns.includes('(') || columns.includes(':')) {
+        // Fall back to AST parsing for JOINs
+        return null;
+      }
+      
+      // Check for dot notation in filter column (e.g., posts.published)
+      if (filterColumn.includes('.')) {
+        // Fall back to AST parsing for queries with dot notation
+        return null;
+      }
+      
+      const value = filterValue.replace(/['"`]/g, '');
+      const sql = `SELECT ${columns} FROM ${table} WHERE ${filterColumn} = '${value}'`;
+      return {
+        original: queryText,
+        sql,
+        warnings: columns === '*' ? ['Consider selecting specific columns instead of * for better performance'] : []
+      };
+    }
+
+    // SELECT with IN filter
+    const selectWithInPattern = /^supabase\.from\(['"`]([^'"`]+)['"`]\)\.select\(['"`]([^'"`]+)['"`]\)\.in\(['"`]([^'"`]+)['"`],\s*(\[[^]]+\])\)$/;
+    const selectWithInMatch = trimmed.match(selectWithInPattern);
+    if (selectWithInMatch) {
+      const [, table, columns, filterColumn, arrayStr] = selectWithInMatch;
+      try {
+        const array = JSON.parse(arrayStr);
+        const values = array.map((v: any) => typeof v === 'string' ? `'${v}'` : v).join(', ');
+        const sql = `SELECT ${columns} FROM ${table} WHERE ${filterColumn} IN (${values})`;
+        return {
+          original: queryText,
+          sql,
+          warnings: columns === '*' ? ['Consider selecting specific columns instead of * for better performance'] : []
+        };
+      } catch {
+        // Fall back to AST parsing
+        return null;
+      }
+    }
+
+    // SELECT with LIKE filter
+    const selectWithLikePattern = /^supabase\.from\(['"`]([^'"`]+)['"`]\)\.select\(['"`]([^'"`]+)['"`]\)\.like\(['"`]([^'"`]+)['"`],\s*['"`]([^'"`]+)['"`]\)$/;
+    const selectWithLikeMatch = trimmed.match(selectWithLikePattern);
+    if (selectWithLikeMatch) {
+      const [, table, columns, filterColumn, pattern] = selectWithLikeMatch;
+      const sql = `SELECT ${columns} FROM ${table} WHERE ${filterColumn} LIKE '${pattern}'`;
+      return {
+        original: queryText,
+        sql,
+        warnings: columns === '*' ? ['Consider selecting specific columns instead of * for better performance'] : []
+      };
+    }
+
+    // SELECT with GT filter
+    const selectWithGtPattern = /^supabase\.from\(['"`]([^'"`]+)['"`]\)\.select\(['"`]([^'"`]+)['"`]\)\.gt\(['"`]([^'"`]+)['"`],\s*([^)]+)\)$/;
+    const selectWithGtMatch = trimmed.match(selectWithGtPattern);
+    if (selectWithGtMatch) {
+      const [, table, columns, filterColumn, value] = selectWithGtMatch;
+      const cleanValue = value.replace(/['"`]/g, '');
+      const sql = `SELECT ${columns} FROM ${table} WHERE ${filterColumn} > ${cleanValue}`;
+      return {
+        original: queryText,
+        sql,
+        warnings: columns === '*' ? ['Consider selecting specific columns instead of * for better performance'] : []
+      };
+    }
+
+    // Simple INSERT with better pattern matching
+    const insertPattern = /^supabase\.from\(['"`]([^'"`]+)['"`]\)\.insert\((\{[^}]+\})\)$/;
+    const insertMatch = trimmed.match(insertPattern);
+    if (insertMatch) {
+      const [, table, dataStr] = insertMatch;
+      try {
+        // Handle simple object patterns without full JSON parsing
+        const data = this.parseSimpleObject(dataStr);
+        if (data) {
+          const columns = Object.keys(data).join(', ');
+          const values = Object.values(data).map(v => typeof v === 'string' ? `'${v}'` : v).join(', ');
+          const sql = `INSERT INTO ${table} (${columns}) VALUES (${values})`;
+          return {
+            original: queryText,
+            sql,
+            warnings: []
+          };
+        }
+      } catch {
+        // Fall back to AST parsing if parsing fails
+        return null;
+      }
+    }
+
+    // Simple UPDATE with better pattern matching
+    const updatePattern = /^supabase\.from\(['"`]([^'"`]+)['"`]\)\.eq\(['"`]([^'"`]+)['"`],\s*['"`]?([^'"`)]+)['"`]?\)\.update\((\{[^}]+\})\)$/;
+    const updateMatch = trimmed.match(updatePattern);
+    if (updateMatch) {
+      const [, table, whereColumn, whereValue, dataStr] = updateMatch;
+      try {
+        const data = this.parseSimpleObject(dataStr);
+        if (data) {
+          const setClause = Object.entries(data).map(([k, v]) => `${k} = ${typeof v === 'string' ? `'${v}'` : v}`).join(', ');
+          const value = whereValue.replace(/['"`]/g, '');
+          const sql = `UPDATE ${table} SET ${setClause} WHERE ${whereColumn} = '${value}'`;
+          return {
+            original: queryText,
+            sql,
+            warnings: []
+          };
+        }
+      } catch {
+        return null;
+      }
+    }
+
+    // Simple DELETE
+    const deletePattern = /^supabase\.from\(['"`]([^'"`]+)['"`]\)\.eq\(['"`]([^'"`]+)['"`],\s*['"`]?([^'"`)]+)['"`]?\)\.delete\(\)$/;
+    const deleteMatch = trimmed.match(deletePattern);
+    if (deleteMatch) {
+      const [, table, whereColumn, whereValue] = deleteMatch;
+      const value = whereValue.replace(/['"`]/g, '');
+      const sql = `DELETE FROM ${table} WHERE ${whereColumn} = '${value}'`;
+      return {
+        original: queryText,
+        sql,
+        warnings: []
+      };
+    }
+
+    // If no simple pattern matches, return null to fall back to AST parsing
+    return null;
+  }
+
+  /**
+   * Parse simple object strings without full JSON parsing for better performance
+   */
+  private parseSimpleObject(objStr: string): Record<string, any> | null {
+    try {
+      // Handle simple patterns like {name: 'John', email: 'john@example.com'}
+      const cleanStr = objStr.replace(/(\w+):\s*['"`]([^'"`]+)['"`]/g, '"$1": "$2"');
+      return JSON.parse(cleanStr);
+    } catch {
+      try {
+        // Fallback to regular JSON parsing
+        return JSON.parse(objStr);
+      } catch {
+        return null;
+      }
     }
   }
 

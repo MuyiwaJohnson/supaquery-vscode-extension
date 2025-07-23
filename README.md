@@ -2,12 +2,19 @@
 
 A VS Code extension that translates Supabase JavaScript queries to SQL, HTTP requests, and cURL commands in real-time.
 
+
 ## 🚀 Features
 
 - **Context Menu**: Right-click on selected Supabase query to translate
 - **Keyboard Shortcut**: Use `Ctrl+Shift+T` to translate selected queries
 - **Real-time Updates**: See translations as you type when the webview panel is open
 - **Copy to Clipboard**: One-click copying for all translation formats
+
+## Image of the extension in action
+
+![SupaQuery Demo](demo.jpg)
+
+*SupaQuery in action: translating Supabase JavaScript queries to SQL, HTTP, and cURL in real-time*
 
 ### Supported Operations
 
@@ -70,22 +77,33 @@ supabase.from('products')
 2. **Keyboard Shortcut**: Select a query and press `Ctrl+Shift+T`
 3. **Real-time**: Keep the webview panel open for automatic updates
 
-## ⚠️ Limitations
+## ✅ What Works Great
 
-### Core Limitations
-- **Non-SELECT Round-trip**: INSERT/UPDATE/DELETE cannot be translated back to Supabase JS
-- **Dynamic Queries**: Cannot parse queries built at runtime
-- **Ternary Operators**: Not supported in `.select()` statements
-- **Schema Validation**: Cannot verify against actual database schema
+### Simple CRUD Operations
+- **Basic SELECT**: `supabase.from('users').select('*').eq('status', 'active')`
+- **Simple INSERT**: `supabase.from('users').insert({name: 'John', email: 'john@example.com'})`
+- **Basic UPDATE**: `supabase.from('users').eq('id', 1).update({name: 'Jane'})`
+- **Simple DELETE**: `supabase.from('users').eq('id', 1).delete()`
+- **Basic Filtering**: `.eq()`, `.gt()`, `.lt()`, `.like()`, `.in()`
+
+### Perfect For
+- Learning Supabase query syntax
+- Quick SQL translation for simple operations
+- Generating HTTP/cURL requests for basic CRUD
+- Understanding how Supabase queries map to SQL
+
+## ⚠️ Current Limitations
+
+### Complex Features (Coming Soon)
+- **Advanced Joins**: Complex relationship queries with multiple tables
+- **Nested JSONB**: Deep JSONB operations and queries
+- **Dynamic Queries**: Queries built at runtime with variables
+- **Ternary Operators**: Complex conditional selections
 
 ### HTTP/cURL Limitations
-- **Authentication**: No auth headers included
+- **Authentication**: No auth headers included (use your own API keys)
 - **RLS Policies**: Cannot account for Row Level Security
-- **Base URL**: Uses localhost; manual adjustment may be needed
-
-### Performance
-- **Large Queries**: May cause parsing delays
-- **Real-time Updates**: Continuous parsing may impact performance
+- **Base URL**: Uses localhost; adjust for your Supabase project URL
 
 ## Architecture
 
@@ -131,29 +149,38 @@ Quick start:
 
 ## Roadmap
 
-### 🚀 Core Features
-- [x] Full CRUD support (SELECT, INSERT, UPDATE, DELETE, UPSERT)
+### 🎯 Phase 1: Perfect Simple Queries (Current Focus)
+- [x] Basic CRUD operations (SELECT, INSERT, UPDATE, DELETE)
+- [x] Simple filtering (.eq, .gt, .lt, .like, .in)
 - [x] Real-time translation updates
-- [x] Beautiful webview interface with copy functionality
-- [x] HTTP and cURL generation for all operations
-- [x] Advanced filtering and joins support
+- [x] Copy to clipboard functionality
+- [ ] **Better Error Messages**: Clear, helpful messages for common mistakes
+- [ ] **Query Validation**: Catch syntax errors before translation
+- [ ] **More Examples**: Comprehensive examples for each operation type
+- [ ] **Performance**: Optimize for fast, reliable simple query translation
 
-### 🔧 Achievable Improvements
-- [ ] **Better Error Messages**: More descriptive error messages for common issues
-- [ ] **Query Validation**: Basic syntax validation before translation
-- [ ] **Copy All Results**: Button to copy all translations at once
+### 🚀 Phase 2: Enhanced Simple Features
+- [ ] **Copy All Results**: One-click copy for all translation formats
 - [ ] **Result Persistence**: Save results between VS Code sessions
-- [ ] **Keyboard Shortcuts**: Additional shortcuts for common actions
+- [ ] **Export Options**: Export to JSON, markdown, or plain text
 - [ ] **Theme Integration**: Better dark/light theme support
-- [ ] **Export Options**: Export results to file (JSON, markdown)
+- [ ] **Keyboard Shortcuts**: Additional shortcuts for power users
 
-### 🛠️ Technical Enhancements
-- [ ] **Performance Optimization**: Faster parsing for large queries
-- [ ] **Memory Management**: Reduce memory usage for complex queries
-- [ ] **Error Recovery**: Better handling of malformed queries
-- [ ] **Test Coverage**: Increase test coverage to 95%+
-- [ ] **Documentation**: More examples and use cases
-- [ ] **TypeScript Types**: Better type definitions for contributors
+### 🔧 Phase 3: Gradual Complexity (Future)
+- [ ] **Basic Joins**: Simple relationship queries
+- [ ] **JSONB Support**: Basic JSONB operations
+- [ ] **Range Operators**: .gte, .lte, .between
+- [ ] **Ordering**: .order() support
+- [ ] **Limiting**: .limit() and .range() support
+
+### 🛠️ Technical Improvements
+- [ ] **Test Coverage**: Comprehensive tests for all simple operations
+- [ ] **Documentation**: More examples and troubleshooting guides
+- [ ] **Error Recovery**: Graceful handling of edge cases
+- [ ] **Performance**: Faster parsing and response times
+
+> **🎯 Focused on Simple Queries**: This extension is designed to handle basic Supabase CRUD operations reliably. While complex queries are being worked on, the current version excels at simple, everyday database operations that most developers use 80% of the time.
+
 
 
 ## License

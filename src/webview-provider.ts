@@ -11,6 +11,12 @@ export class TranslationWebviewProvider implements vscode.WebviewViewProvider {
     private _currentResult: any = null;
     private _documentChangeListener?: vscode.Disposable;
     private _debounceTimer?: NodeJS.Timeout;
+    private _performanceStats = {
+        totalTranslations: 0,
+        averageTime: 0,
+        cacheHits: 0,
+        cacheMisses: 0
+    };
 
     constructor(private readonly _extensionUri: vscode.Uri) {
         this._translator = new EnhancedTranslator();
@@ -90,9 +96,6 @@ export class TranslationWebviewProvider implements vscode.WebviewViewProvider {
             this._stopRealtimeTranslation();
         });
 
-        // Start real-time translation when panel is created
-        this._startRealtimeTranslation();
-
         // Handle messages from the panel
         panel.webview.onDidReceiveMessage(
             message => {
@@ -109,13 +112,20 @@ export class TranslationWebviewProvider implements vscode.WebviewViewProvider {
 
         panel.webview.html = this._getHtmlForWebview(panel.webview);
         
-        // Send the translation result to the webview
-        const result = await this._translateQuery(query);
-        this._currentResult = result;
-        panel.webview.postMessage({ 
-            command: 'showResult', 
-            result: result 
-        });
+        // Start real-time translation with a small delay to ensure panel is ready
+        setTimeout(() => {
+            this._startRealtimeTranslation();
+        }, 100);
+        
+        // Add a small delay before translation to ensure smooth UX
+        setTimeout(async () => {
+            const result = await this._translateQuery(query);
+            this._currentResult = result;
+            panel.webview.postMessage({ 
+                command: 'showResult', 
+                result: result 
+            });
+        }, 50);
 
         // Focus the webview panel
         panel.reveal(vscode.ViewColumn.Beside);
@@ -128,6 +138,13 @@ export class TranslationWebviewProvider implements vscode.WebviewViewProvider {
                 command: 'clearResult'
             });
         }
+    }
+
+    public getPerformanceStats() {
+        return {
+            ...this._performanceStats,
+            cacheStats: this._translator.getCacheStats()
+        };
     }
 
     private _startRealtimeTranslation() {
@@ -153,7 +170,7 @@ export class TranslationWebviewProvider implements vscode.WebviewViewProvider {
                     
                     this._debounceTimer = setTimeout(() => {
                         this._handleRealtimeTranslation(lineText);
-                    }, 500);
+                    }, 200);
                     
                     break;
                 }
@@ -264,8 +281,41 @@ export class TranslationWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     private async _translateQuery(query: string) {
+        const startTime = performance.now();
+        
         try {
+            // Get cache stats before translation
+            const cacheStatsBefore = this._translator.getCacheStats();
+            
             const result = await this._translator.fullTranslation(query);
+            
+            // Get cache stats after translation
+            const cacheStatsAfter = this._translator.getCacheStats();
+            
+            // Update performance stats
+            const translationTime = performance.now() - startTime;
+            this._performanceStats.totalTranslations++;
+            this._performanceStats.averageTime = 
+                (this._performanceStats.averageTime * (this._performanceStats.totalTranslations - 1) + translationTime) / 
+                this._performanceStats.totalTranslations;
+            
+            // Check if it was a cache hit or miss
+            if (cacheStatsAfter.size > cacheStatsBefore.size) {
+                this._performanceStats.cacheMisses++;
+            } else {
+                this._performanceStats.cacheHits++;
+            }
+            
+            // Check if the translation was successful
+            if (result.error) {
+                return {
+                    success: false,
+                    originalQuery: query,
+                    error: result.error,
+                    warnings: result.warnings
+                };
+            }
+            
             return {
                 success: true,
                 originalQuery: query,
@@ -295,10 +345,8 @@ export class TranslationWebviewProvider implements vscode.WebviewViewProvider {
     private async _handleCopy(text: string, title?: string) {
         try {
             await vscode.env.clipboard.writeText(text);
-            const message = title ? `Copied ${title} to clipboard!` : 'Copied to clipboard!';
-            vscode.window.showInformationMessage(message);
         } catch (error) {
-            vscode.window.showErrorMessage('Failed to copy to clipboard');
+            // Silently fail - the button text change is enough feedback
         }
     }
 

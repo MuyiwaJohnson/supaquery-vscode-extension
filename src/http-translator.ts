@@ -215,10 +215,16 @@ export class HttpTranslator {
       }
     }
     
-    // Extract WHERE conditions
+    // Extract WHERE conditions from both SQL and original query for better accuracy
     const whereMatch = sql.match(/WHERE\s+(.+?)(?:\s+ORDER\s+BY|\s+GROUP\s+BY|\s+HAVING|\s+LIMIT|\s+OFFSET|$)/i);
     if (whereMatch) {
       this.parseWhereConditions(whereMatch[1], params);
+    }
+    
+    // Also extract conditions from original query to handle range operators and other patterns
+    const originalParams = this.extractWhereConditionsFromOriginalQuery(originalQuery);
+    for (const [key, value] of originalParams) {
+      params.set(key, value);
     }
     
     // Extract ORDER BY
@@ -635,20 +641,84 @@ export class HttpTranslator {
   private extractWhereConditionsFromOriginalQuery(originalQuery: string): Map<string, string> {
     const params = new Map<string, string>();
     
-    // Look for common filter patterns
-    const eqMatch = originalQuery.match(/\.eq\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*['"`]?([^'"`,\s)]+)['"`]?\s*\)/i);
-    if (eqMatch) {
-      params.set(eqMatch[1], `eq.${eqMatch[2]}`);
+    // Look for all filter patterns and collect them
+    const allMatches: Array<{column: string, operator: string, value: string}> = [];
+    
+    // Match all eq patterns
+    const eqMatches = originalQuery.matchAll(/\.eq\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*['"`]?([^'"`,\s)]+)['"`]?\s*\)/gi);
+    for (const match of eqMatches) {
+      allMatches.push({column: match[1], operator: 'eq', value: match[2]});
     }
     
-    const gtMatch = originalQuery.match(/\.gt\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*['"`]?([^'"`,\s)]+)['"`]?\s*\)/i);
-    if (gtMatch) {
-      params.set(gtMatch[1], `gt.${gtMatch[2]}`);
+    // Match all gt patterns
+    const gtMatches = originalQuery.matchAll(/\.gt\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*['"`]?([^'"`,\s)]+)['"`]?\s*\)/gi);
+    for (const match of gtMatches) {
+      allMatches.push({column: match[1], operator: 'gt', value: match[2]});
     }
     
-    const ltMatch = originalQuery.match(/\.lt\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*['"`]?([^'"`,\s)]+)['"`]?\s*\)/i);
-    if (ltMatch) {
-      params.set(ltMatch[1], `lt.${ltMatch[2]}`);
+    // Match all gte patterns
+    const gteMatches = originalQuery.matchAll(/\.gte\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*['"`]?([^'"`,\s)]+)['"`]?\s*\)/gi);
+    for (const match of gteMatches) {
+      allMatches.push({column: match[1], operator: 'gte', value: match[2]});
+    }
+    
+    // Match all lt patterns
+    const ltMatches = originalQuery.matchAll(/\.lt\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*['"`]?([^'"`,\s)]+)['"`]?\s*\)/gi);
+    for (const match of ltMatches) {
+      allMatches.push({column: match[1], operator: 'lt', value: match[2]});
+    }
+    
+    // Match all lte patterns
+    const lteMatches = originalQuery.matchAll(/\.lte\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*['"`]?([^'"`,\s)]+)['"`]?\s*\)/gi);
+    for (const match of lteMatches) {
+      allMatches.push({column: match[1], operator: 'lte', value: match[2]});
+    }
+    
+    // Match all rangeGt patterns
+    const rangeGtMatches = originalQuery.matchAll(/\.rangeGt\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*['"`]?([^'"`,\s)]+)['"`]?\s*\)/gi);
+    for (const match of rangeGtMatches) {
+      allMatches.push({column: match[1], operator: 'gt', value: match[2]});
+    }
+    
+    // Match all rangeGte patterns
+    const rangeGteMatches = originalQuery.matchAll(/\.rangeGte\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*['"`]?([^'"`,\s)]+)['"`]?\s*\)/gi);
+    for (const match of rangeGteMatches) {
+      allMatches.push({column: match[1], operator: 'gte', value: match[2]});
+    }
+    
+    // Match all rangeLt patterns
+    const rangeLtMatches = originalQuery.matchAll(/\.rangeLt\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*['"`]?([^'"`,\s)]+)['"`]?\s*\)/gi);
+    for (const match of rangeLtMatches) {
+      allMatches.push({column: match[1], operator: 'lt', value: match[2]});
+    }
+    
+    // Match all rangeLte patterns
+    const rangeLteMatches = originalQuery.matchAll(/\.rangeLte\s*\(\s*['"`]([^'"`]+)['"`]\s*,\s*['"`]?([^'"`,\s)]+)['"`]?\s*\)/gi);
+    for (const match of rangeLteMatches) {
+      allMatches.push({column: match[1], operator: 'lte', value: match[2]});
+    }
+    
+    // Group by column and handle multiple operators
+    const columnGroups = new Map<string, Array<{operator: string, value: string}>>();
+    for (const match of allMatches) {
+      if (!columnGroups.has(match.column)) {
+        columnGroups.set(match.column, []);
+      }
+      columnGroups.get(match.column)!.push({operator: match.operator, value: match.value});
+    }
+    
+    // Add parameters to the map
+    for (const [column, operators] of columnGroups) {
+      if (operators.length === 1) {
+        // Single operator
+        params.set(column, `${operators[0].operator}.${operators[0].value}`);
+      } else {
+        // Multiple operators - use the last one (most recent in the query)
+        const lastOperator = operators[operators.length - 1];
+        params.set(column, `${lastOperator.operator}.${lastOperator.value}`);
+        // Note: PostgREST actually supports multiple filters on the same column automatically
+        // The second filter will be applied as an additional condition
+      }
     }
     
     return params;

@@ -66,7 +66,8 @@ describe('EnhancedTranslator CRUD Operations', () => {
       expect(result.http!.method).to.equal('GET');
       expect(result.curl).to.include('curl -G');
       // SELECT queries should have Supabase JS generation
-      expect(result.supabaseJs).to.exist;
+      expect(result.supabaseJs).to.not.be.undefined;
+      expect(result.supabaseJs).to.not.be.null;
     });
   });
 }); 

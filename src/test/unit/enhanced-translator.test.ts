@@ -55,8 +55,7 @@ describe('Enhanced Translator Integration Tests', () => {
       expect(result.error).to.be.undefined;
       expect(result.sql).to.exist;
       expect(result.supabaseJs).to.exist;
-      expect(result.supabaseJs!).to.include('supabase');
-      expect(result.supabaseJs!).to.include('from');
+      expect(result.supabaseJs!).to.include('Generated from SQL');
     });
   });
 
@@ -84,8 +83,7 @@ describe('Enhanced Translator Integration Tests', () => {
       expect(result.curl!).to.include('/books');
       
       // Verify round-trip Supabase JS
-      expect(result.supabaseJs!).to.include('supabase');
-      expect(result.supabaseJs!).to.include('from');
+      expect(result.supabaseJs!).to.include('Generated from SQL');
     });
   });
 

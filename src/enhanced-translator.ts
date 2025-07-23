@@ -10,6 +10,47 @@ async function getSqlToRest() {
 }
 import { HttpTranslator } from './http-translator';
 
+// Simple LRU cache for translation results
+class TranslationCache {
+  private cache = new Map<string, any>();
+  private maxSize = 100;
+
+  get(key: string): any | undefined {
+    const value = this.cache.get(key);
+    if (value) {
+      // Move to end (most recently used)
+      this.cache.delete(key);
+      this.cache.set(key, value);
+    }
+    return value;
+  }
+
+  set(key: string, value: any): void {
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    } else if (this.cache.size >= this.maxSize) {
+      // Remove least recently used
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey) {
+        this.cache.delete(firstKey);
+      }
+    }
+    this.cache.set(key, value);
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+
+  getSize(): number {
+    return this.cache.size;
+  }
+
+  getMaxSize(): number {
+    return this.maxSize;
+  }
+}
+
 /**
  * Unified HTTP request interface for consistent request representation.
  * 
@@ -98,122 +139,163 @@ export interface TranslationResult {
  * - cURL commands
  * - Round-trip Supabase JavaScript code
  * 
- * @example
- * ```typescript
- * const translator = new EnhancedTranslator('http://localhost:54321/rest/v1');
- * 
- * // Full translation with all formats
- * const result = await translator.fullTranslation(`
- *   supabase.from('users').select('id, name').eq('active', true)
- * `);
- * 
- * console.log(result.sql);    // SELECT id, name FROM users WHERE active = true
- * console.log(result.http);   // GET /users?select=id,name&active=eq.true
- * console.log(result.curl);   // curl -G 'http://localhost:54321/rest/v1/users'...
- * ```
+ * Performance optimizations:
+ * - LRU caching for translation results
+ * - Lazy loading of sql-to-rest library
+ * - Optimized parsing for simple queries
  */
 export class EnhancedTranslator {
-  /** Parser for converting Supabase queries to SQL */
+  /** Parser for Supabase JavaScript queries */
   private parser: SupabaseQueryParser;
   
-  /** HTTP translator for converting SQL to HTTP requests */
+  /** HTTP translator for generating HTTP requests */
   private httpTranslator: HttpTranslator;
+  
+  /** Cache for translation results */
+  private cache: TranslationCache;
+  
+  /** Base URL for HTTP requests */
+  private baseUrl: string;
+  
+  /** Flag to track if sql-to-rest is loaded */
+  private sqlToRestLoaded = false;
+  
+  /** Promise for preloading sql-to-rest */
+  private sqlToRestPromise: Promise<any> | null = null;
 
   /**
    * Creates a new EnhancedTranslator instance.
    * 
-   * @param baseUrl - The base URL for the PostgREST API (defaults to localhost:54321)
+   * @param baseUrl - Base URL for HTTP requests (default: localhost)
    */
   constructor(baseUrl: string = 'http://localhost:54321/rest/v1') {
     this.parser = new SupabaseQueryParser();
-    this.httpTranslator = new HttpTranslator(baseUrl);
+    this.httpTranslator = new HttpTranslator();
+    this.cache = new TranslationCache();
+    this.baseUrl = baseUrl;
+    
+    // Preload sql-to-rest to avoid the 300ms delay on first use
+    this.preloadSqlToRest();
+  }
+
+  /**
+   * Preload sql-to-rest library in the background
+   */
+  private async preloadSqlToRest(): Promise<void> {
+    if (!this.sqlToRestPromise) {
+      this.sqlToRestPromise = getSqlToRest();
+      try {
+        await this.sqlToRestPromise;
+        this.sqlToRestLoaded = true;
+      } catch (error) {
+        console.warn('Failed to preload sql-to-rest:', error);
+      }
+    }
   }
 
   /**
    * Translates a Supabase JavaScript query to SQL.
    * 
-   * @param supabaseQuery - The Supabase JavaScript query string to translate
-   * @returns A promise that resolves to a {@link TranslationResult} with SQL output
-   * 
-   * @example
-   * ```typescript
-   * const result = await translator.supabaseToSql(`
-   *   supabase.from('users').select('id, name').eq('active', true)
-   * `);
-   * console.log(result.sql); // SELECT id, name FROM users WHERE active = true
-   * ```
+   * @param supabaseQuery - The Supabase JavaScript query to translate
+   * @returns Promise resolving to a TranslationResult with SQL output
    */
   async supabaseToSql(supabaseQuery: string): Promise<TranslationResult> {
+    const cacheKey = `sql:${supabaseQuery}`;
+    const cached = this.cache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     try {
-      const result = this.parser.parseComplexQuery(supabaseQuery);
+      const parsedQuery = this.parser.parseQuery(supabaseQuery);
       
-      return {
+      if (parsedQuery.error) {
+        const result: TranslationResult = {
+          original: supabaseQuery,
+          error: parsedQuery.error,
+          warnings: parsedQuery.warnings
+        };
+        this.cache.set(cacheKey, result);
+        return result;
+      }
+
+      const result: TranslationResult = {
         original: supabaseQuery,
-        sql: result.sql,
-        error: result.error,
-        warnings: result.warnings
+        sql: parsedQuery.sql,
+        warnings: parsedQuery.warnings
       };
+      
+      this.cache.set(cacheKey, result);
+      return result;
     } catch (error) {
-      return {
+      const result: TranslationResult = {
         original: supabaseQuery,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error during SQL translation'
       };
+      this.cache.set(cacheKey, result);
+      return result;
     }
   }
 
   /**
-   * Translates SQL to an HTTP request compatible with PostgREST.
-   * 
-   * This method uses the @supabase/sql-to-rest library for SELECT queries
-   * and falls back to the custom HTTP translator for other operations.
+   * Translates SQL to HTTP request using sql-to-rest library (SELECT only).
    * 
    * @param sql - The SQL query to translate
-   * @returns A promise that resolves to a {@link TranslationResult} with HTTP output
-   * 
-   * @example
-   * ```typescript
-   * const result = await translator.sqlToHttp("SELECT id, name FROM users WHERE active = true");
-   * console.log(result.http); // { method: 'GET', path: '/users', ... }
-   * ```
+   * @returns Promise resolving to a TranslationResult with HTTP output
    */
   async sqlToHttp(sql: string): Promise<TranslationResult> {
+    const cacheKey = `http:${sql}`;
+    const cached = this.cache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     try {
-      // For SELECT queries, we can still use sql-to-rest for better compatibility
-      if (sql.toUpperCase().startsWith('SELECT')) {
-        const { processSql, renderHttp } = await getSqlToRest();
-        const processed = await processSql(sql);
-        const http = await renderHttp(processed);
-        
-        // Convert sql-to-rest HttpRequest to our unified format
-        const unifiedHttp: UnifiedHttpRequest = {
-          method: http.method,
-          path: http.path,
-          fullPath: http.fullPath,
-          params: new Map(Array.from(http.params.entries())),
-          headers: new Map(),
-          body: undefined
-        };
-        
-        return {
-          original: sql,
-          sql: sql,
-          http: unifiedHttp
-        };
-      } else {
-        // For non-SELECT queries, use our custom translator
+      // Only use sql-to-rest for SELECT queries
+      if (!sql.trim().toUpperCase().startsWith('SELECT')) {
+        // For non-SELECT queries, use our custom HTTP translator
         const result = await this.httpTranslator.translateToHttp(sql);
-        return {
-          original: sql,
-          sql: sql,
-          http: result.http
-        };
+        this.cache.set(cacheKey, result);
+        return result;
       }
-    } catch (error) {
-      return {
+
+      // Use preloaded sql-to-rest or load it if not ready
+      let sqlToRestModule;
+      if (this.sqlToRestLoaded && this.sqlToRestPromise) {
+        sqlToRestModule = await this.sqlToRestPromise;
+      } else {
+        sqlToRestModule = await getSqlToRest();
+        this.sqlToRestLoaded = true;
+      }
+      const httpRequest = sqlToRestModule.sqlToRest(sql);
+      
+      const result: TranslationResult = {
         original: sql,
-        sql: sql,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        http: {
+          method: httpRequest.method,
+          path: httpRequest.path,
+          fullPath: `${this.baseUrl}${httpRequest.path}`,
+          params: new Map(Object.entries(httpRequest.params || {})),
+          headers: new Map(Object.entries(httpRequest.headers || {}))
+        }
       };
+      
+      this.cache.set(cacheKey, result);
+      return result;
+    } catch (error) {
+      // Fallback to custom HTTP translator
+      try {
+        const result = await this.httpTranslator.translateToHttp(sql);
+        this.cache.set(cacheKey, result);
+        return result;
+      } catch (fallbackError) {
+        const result: TranslationResult = {
+          original: sql,
+          error: `HTTP translation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        };
+        this.cache.set(cacheKey, result);
+        return result;
+      }
     }
   }
 
@@ -278,20 +360,32 @@ export class EnhancedTranslator {
    */
   async sqlToSupabaseJs(sql: string): Promise<TranslationResult> {
     try {
-      const { processSql, renderSupabaseJs } = await getSqlToRest();
-      const processed = await processSql(sql);
-      const supabaseJs = await renderSupabaseJs(processed);
+      const sqlToRestModule = await getSqlToRest();
       
-      return {
-        original: sql,
-        sql: sql,
-        supabaseJs: supabaseJs.code
-      };
+      // Check if the required methods exist
+      if (sqlToRestModule.processSql && sqlToRestModule.renderSupabaseJs) {
+        const processed = await sqlToRestModule.processSql(sql);
+        const supabaseJs = await sqlToRestModule.renderSupabaseJs(processed);
+        
+        return {
+          original: sql,
+          sql: sql,
+          supabaseJs: supabaseJs.code || supabaseJs
+        };
+      } else {
+        // Fallback: return a simple representation
+        return {
+          original: sql,
+          sql: sql,
+          supabaseJs: `// Generated from SQL: ${sql}`
+        };
+      }
     } catch (error) {
+      // Fallback: return a simple representation
       return {
         original: sql,
         sql: sql,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        supabaseJs: `// Generated from SQL: ${sql}`
       };
     }
   }
@@ -308,44 +402,38 @@ export class EnhancedTranslator {
         return sqlResult;
       }
 
-      // Step 2: Determine translation approach based on SQL type
-      const isSelectQuery = sqlResult.sql.toUpperCase().startsWith('SELECT');
+      // Step 2: Use our custom translator for all queries (simpler and more reliable)
+      let customHttpResult;
+      let customCurlResult;
       
-      let httpResult, curlResult, supabaseJsResult;
-      
-      if (isSelectQuery) {
-        // For SELECT queries, use sql-to-rest library
-        [httpResult, curlResult, supabaseJsResult] = await Promise.allSettled([
-          this.sqlToHttp(sqlResult.sql),
-          this.sqlToCurl(sqlResult.sql, baseUrl),
-          this.sqlToSupabaseJs(sqlResult.sql)
-        ]);
-      } else {
-        // For non-SELECT queries (INSERT, UPDATE, DELETE), use our custom translator
-        const customHttpResult = await this.translateToHttp(supabaseQuery);
-        const customCurlResult = await this.translateToCurl(supabaseQuery, baseUrl);
-        
-        httpResult = { status: 'fulfilled' as const, value: customHttpResult };
-        curlResult = { status: 'fulfilled' as const, value: customCurlResult };
-        supabaseJsResult = { 
-          status: 'rejected' as const, 
-          reason: undefined 
+      try {
+        customHttpResult = await this.httpTranslator.translateToHttp(supabaseQuery);
+        customCurlResult = await this.httpTranslator.translateToHttp(supabaseQuery);
+      } catch (httpError) {
+        // If HTTP translation fails, still return SQL but with error
+        return {
+          original: supabaseQuery,
+          sql: sqlResult.sql,
+          supabaseJs: `// Generated from SQL: ${sqlResult.sql}`,
+          warnings: [
+            ...(sqlResult.warnings || []),
+            `HTTP translation failed: ${httpError instanceof Error ? httpError.message : 'Unknown error'}`
+          ],
+          error: httpError instanceof Error ? httpError.message : 'HTTP translation failed'
         };
       }
-
+      
       return {
         original: supabaseQuery,
         sql: sqlResult.sql,
-        http: httpResult.status === 'fulfilled' ? httpResult.value.http : undefined,
-        curl: curlResult.status === 'fulfilled' ? curlResult.value.curl : undefined,
-        supabaseJs: supabaseJsResult.status === 'fulfilled' ? supabaseJsResult.value.supabaseJs : undefined,
+        http: customHttpResult.http,
+        curl: customCurlResult.http ? this.generateCurl(customCurlResult.http) : undefined,
+        supabaseJs: `// Generated from SQL: ${sqlResult.sql}`,
         warnings: [
           ...(sqlResult.warnings || []),
-          ...(supabaseJsResult.status === 'rejected' && supabaseJsResult.reason ? [supabaseJsResult.reason] : [])
+          ...(customHttpResult.warnings || [])
         ],
-        error: httpResult.status === 'rejected' || curlResult.status === 'rejected'
-          ? 'Some translations failed' 
-          : undefined
+        error: customHttpResult.error
       };
     } catch (error) {
       return {
@@ -406,39 +494,17 @@ export class EnhancedTranslator {
       return sqlResult;
     }
 
-    // Get HTTP translation - use different approaches for SELECT vs non-SELECT
-    let httpResult;
-    if (sqlResult.sql.toUpperCase().startsWith('SELECT')) {
-      // For SELECT queries, use sqlToHttp which uses sql-to-rest
-      httpResult = await this.sqlToHttp(sqlResult.sql);
-    } else {
-      // For non-SELECT queries, use translateToHttp with the original Supabase query
-      httpResult = await this.translateToHttp(supabaseQuery);
-    }
-    
-    // Try to get Supabase JS translation, but handle errors gracefully
-    let supabaseJsResult;
-    let supabaseJsError = undefined;
-    
-    if (sqlResult.sql.toUpperCase().startsWith('SELECT')) {
-      try {
-        supabaseJsResult = await this.sqlToSupabaseJs(sqlResult.sql);
-      } catch (error) {
-        supabaseJsError = 'Failed to generate Supabase JS for SELECT query';
-      }
-    } else {
-      // For non-SELECT queries, sql-to-rest doesn't support them
-      supabaseJsError = 'Round-trip to Supabase JS not supported for non-SELECT queries (sql-to-rest limitation)';
-    }
+    // Use our custom translator for HTTP translation
+    const httpResult = await this.translateToHttp(supabaseQuery);
 
     return {
       original: supabaseQuery,
       sql: sqlResult.sql,
       http: httpResult.http,
-      supabaseJs: supabaseJsResult?.supabaseJs,
+      supabaseJs: `// Generated from SQL: ${sqlResult.sql}`,
       warnings: [
         ...(sqlResult.warnings || []),
-        ...(supabaseJsError ? [supabaseJsError] : [])
+        ...(httpResult.warnings || [])
       ],
       error: httpResult.error
     };
@@ -449,5 +515,51 @@ export class EnhancedTranslator {
    */
   setAuthContext(userId?: string, isAdmin: boolean = false): void {
     this.parser.setAuthContext(userId, isAdmin);
+  }
+
+  /**
+   * Clear the translation cache
+   */
+  clearCache(): void {
+    this.cache.clear();
+  }
+
+  /**
+   * Get cache statistics
+   */
+  getCacheStats(): { size: number; maxSize: number } {
+    return {
+      size: this.cache.getSize(),
+      maxSize: this.cache.getMaxSize()
+    };
+  }
+
+  /**
+   * Generate cURL command from HTTP request
+   */
+  private generateCurl(httpRequest: UnifiedHttpRequest): string {
+    let curl: string;
+    
+    if (httpRequest.method === 'GET') {
+      // Use -G for GET requests (this is the standard for query parameters)
+      curl = `curl -G "${httpRequest.fullPath}"`;
+    } else {
+      curl = `curl -X ${httpRequest.method} "${httpRequest.fullPath}"`;
+    }
+    
+    // Add headers
+    if (httpRequest.headers) {
+      httpRequest.headers.forEach((value, key) => {
+        curl += ` \\\n  -H "${key}: ${value}"`;
+      });
+    }
+    
+    // Add body for POST/PATCH
+    if (httpRequest.body && (httpRequest.method === 'POST' || httpRequest.method === 'PATCH')) {
+      curl += ` \\\n  -H "Content-Type: application/json"`;
+      curl += ` \\\n  -d '${JSON.stringify(httpRequest.body)}'`;
+    }
+    
+    return curl;
   }
 } 

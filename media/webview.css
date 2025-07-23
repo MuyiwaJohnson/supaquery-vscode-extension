@@ -26,6 +26,38 @@ body {
 
 
 
+/* Loading State */
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--vscode-descriptionForeground);
+}
+
+.loading-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--vscode-panel-border);
+    border-top: 2px solid var(--vscode-foreground);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-state p {
+    font-size: 13px;
+    margin: 0;
+    opacity: 0.8;
+}
+
 /* Empty State */
 .empty-state {
     display: flex;
@@ -44,14 +76,14 @@ body {
 }
 
 .empty-state h3 {
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 600;
     margin-bottom: 8px;
     color: var(--vscode-foreground);
 }
 
 .empty-state p {
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1.5;
     margin: 0;
 }
@@ -85,14 +117,14 @@ body {
 }
 
 .result-header h2 {
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 600;
     color: var(--vscode-foreground);
     margin: 0;
 }
 
 .timestamp {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--vscode-descriptionForeground);
 }
 
@@ -141,7 +173,7 @@ body {
 }
 
 .title-text {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
     color: var(--vscode-foreground);
     white-space: nowrap;
@@ -185,7 +217,7 @@ body {
     padding: 12px !important;
     background: var(--vscode-editor-background) !important;
     border-radius: 0 0 4px 4px !important;
-    font-size: 14px !important;
+    font-size: 13px !important;
     line-height: 1.5 !important;
     overflow-x: auto;
     overflow-wrap: break-word;
@@ -198,7 +230,7 @@ body {
 
 .code-content code {
     font-family: var(--vscode-editor-font-family) !important;
-    font-size: 15px !important;
+    font-size: 14px !important;
     line-height: 1.5 !important;
     word-break: break-word;
     overflow-wrap: break-word;

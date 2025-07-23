@@ -3,6 +3,10 @@
   "displayName": "SupaQuery",
   "description": "Translate Supabase JavaScript queries to SQL, HTTP, and cURL in real-time",
   "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MuyiwaJohnson/supaquery-vscode-extension.git"
+  },
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -66,7 +70,8 @@
     "test": "node ./out/test/runTest.js",
     "test:unit": "mocha --require ts-node/register 'src/test/unit/**/*.test.ts'",
     "test:integration": "node ./out/test/runTest.js",
-    "test:all": "npm run test:unit && npm run test:integration"
+    "test:all": "npm run test:unit && npm run test:integration",
+    "benchmark": "ts-node src/test/performance/benchmark.ts"
   },
   "devDependencies": {
     "@types/chai": "^4.3.5",

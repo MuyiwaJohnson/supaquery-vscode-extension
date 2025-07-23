@@ -75,6 +75,7 @@ export class QueryVisitor {
       case 'rangeGte':
       case 'rangeLt':
       case 'rangeLte':
+      case 'range':
         return this.visitRangeCall(methodName, args);
       default:
         throw new Error(`Unsupported method: ${methodName}`);
@@ -122,13 +123,17 @@ export class QueryVisitor {
   }
 
   private visitUpdateCall(args: any[]): QueryNode {
-    const result = this.crudParser.parseUpdate([{ getName: () => 'update', getArguments: () => args }]);
+    // Create a mock method chain for the CRUD parser
+    const methodChain = [{ getName: () => 'update', getArguments: () => args }];
+    const result = this.crudParser.parseUpdate(methodChain);
     result.table = this.context.currentTable;
     return result;
   }
 
   private visitDeleteCall(args: any[]): QueryNode {
-    const result = this.crudParser.parseDelete([{ getName: () => 'delete', getArguments: () => args }]);
+    // Create a mock method chain for the CRUD parser
+    const methodChain = [{ getName: () => 'delete', getArguments: () => args }];
+    const result = this.crudParser.parseDelete(methodChain);
     result.table = this.context.currentTable;
     return result;
   }
@@ -141,6 +146,7 @@ export class QueryVisitor {
 
   private visitFilterCall(methodName: string, args: any[]): QueryNode {
     let whereClauses: any[] = [];
+    let joins: any[] = [];
 
     switch (methodName) {
       case 'or':
@@ -166,15 +172,30 @@ export class QueryVisitor {
         const filterColumn = this.extractStringValue(args[0]);
         const filterValue = this.extractValue(args[1]);
         
-        // Check for auth context
-        if (typeof filterValue === 'string' && filterValue.includes('auth.uid()')) {
-          whereClauses = [this.filterParser.parseAuthClause(filterColumn, filterValue)];
-        } else {
+        // Check for dot notation in column (e.g., posts.published)
+        if (filterColumn.includes('.')) {
+          const [tableName, columnName] = filterColumn.split('.');
+          // Create a JOIN for the referenced table
+          const joinClause = this.joinParser.createJoinClause(tableName);
+          joins.push(joinClause);
+          
+          // Use the full column name in the WHERE clause
           whereClauses = [{
             column: filterColumn,
             operator: methodName as any,
             value: filterValue
           }];
+        } else {
+          // Check for auth context
+          if (typeof filterValue === 'string' && filterValue.includes('auth.uid()')) {
+            whereClauses = [this.filterParser.parseAuthClause(filterColumn, filterValue)];
+          } else {
+            whereClauses = [{
+              column: filterColumn,
+              operator: methodName as any,
+              value: filterValue
+            }];
+          }
         }
         break;
     }
@@ -182,7 +203,8 @@ export class QueryVisitor {
     return {
       type: 'select',
       table: this.context.currentTable,
-      where: whereClauses
+      where: whereClauses,
+      joins: joins
     };
   }
 
@@ -294,19 +316,60 @@ export class QueryVisitor {
   // Parse a complete method chain
   parseMethodChain(methodChain: any[]): QueryNode {
     let queryNode: QueryNode | null = null;
+    let crudOperationIndex = -1;
     
-    for (const call of methodChain) {
-      const methodName = call.getName();
+    // Find the first CRUD operation
+    for (let i = 0; i < methodChain.length; i++) {
+      const methodName = methodChain[i].getName();
+      if (['insert', 'update', 'delete', 'upsert'].includes(methodName)) {
+        crudOperationIndex = i;
+        break;
+      }
+    }
+    
+    if (crudOperationIndex >= 0) {
+      // Handle CRUD operation with all method calls (including those before the CRUD operation)
+      const crudCall = methodChain[crudOperationIndex];
+      const allCalls = methodChain; // Include all calls, not just subsequent ones
       
-      if (methodName === 'from') {
-        queryNode = this.visitCallExpression(call);
-      } else if (['insert', 'update', 'delete', 'upsert'].includes(methodName)) {
-        // CRUD operations should replace the query type
-        queryNode = this.visitCallExpression(call);
-      } else if (queryNode) {
-        // Merge subsequent method calls into the existing query node
-        const newCall = this.visitCallExpression(call);
-        queryNode = this.mergeQueryNodes(queryNode, newCall);
+      // Create a method chain for the CRUD parser
+      const crudMethodChain = allCalls;
+      
+      // Make sure the table name is set in the context
+      if (!this.context.currentTable) {
+        // Find the 'from' call to get the table name
+        for (let i = 0; i < crudOperationIndex; i++) {
+          if (methodChain[i].getName() === 'from') {
+            this.context.currentTable = this.extractStringValue(methodChain[i].getArguments()[0]);
+            break;
+          }
+        }
+      }
+      
+      const methodName = crudCall.getName();
+      if (methodName === 'update') {
+        queryNode = this.crudParser.parseUpdate(crudMethodChain);
+      } else if (methodName === 'delete') {
+        queryNode = this.crudParser.parseDelete(crudMethodChain);
+      } else if (methodName === 'insert') {
+        queryNode = this.crudParser.parseInsert(crudMethodChain);
+      } else if (methodName === 'upsert') {
+        queryNode = this.crudParser.parseUpsert(crudMethodChain);
+      }
+      
+      queryNode!.table = this.context.currentTable;
+    } else {
+      // Handle non-CRUD operations
+      for (const call of methodChain) {
+        const methodName = call.getName();
+        
+        if (methodName === 'from') {
+          queryNode = this.visitCallExpression(call);
+        } else if (queryNode) {
+          // Merge subsequent method calls into the existing query node
+          const newCall = this.visitCallExpression(call);
+          queryNode = this.mergeQueryNodes(queryNode, newCall);
+        }
       }
     }
     

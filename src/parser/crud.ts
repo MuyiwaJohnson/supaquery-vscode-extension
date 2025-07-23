@@ -179,6 +179,41 @@ export class CrudParser {
             value: args[1]
           });
           break;
+        case 'rangeGt':
+          whereClauses.push({
+            column: args[0],
+            operator: 'rangeGt',
+            value: args[1]
+          });
+          break;
+        case 'rangeGte':
+          whereClauses.push({
+            column: args[0],
+            operator: 'rangeGte',
+            value: args[1]
+          });
+          break;
+        case 'rangeLt':
+          whereClauses.push({
+            column: args[0],
+            operator: 'rangeLt',
+            value: args[1]
+          });
+          break;
+        case 'rangeLte':
+          whereClauses.push({
+            column: args[0],
+            operator: 'rangeLte',
+            value: args[1]
+          });
+          break;
+        case 'range':
+          whereClauses.push({
+            column: args[0],
+            operator: 'range',
+            value: args[1]
+          });
+          break;
       }
     }
 

@@ -176,10 +176,17 @@ export class FilterParser {
     
     const conditions = clauses.map(clause => {
       const column = clause.column;
-      const operator = this.mapOperator(clause.operator);
+      const operator = clause.operator;
+      
+      // Handle range operator specially
+      if (operator === 'range') {
+        return this.formatRangeClause(column, clause.value);
+      }
+      
+      const mappedOperator = this.mapOperator(operator);
       const value = this.formatValue(clause.value);
       
-      return `${column} ${operator} ${value}`;
+      return `${column} ${mappedOperator} ${value}`;
     });
     
     let whereClause = conditions[0];
@@ -190,6 +197,19 @@ export class FilterParser {
     }
     
     return whereClause;
+  }
+
+  private formatRangeClause(column: string, value: any): string {
+    if (Array.isArray(value) && value.length === 2) {
+      const [start, end] = value;
+      const startValue = this.formatValue(start);
+      const endValue = this.formatValue(end);
+      return `${column} BETWEEN ${startValue} AND ${endValue}`;
+    }
+    
+    // If value is not an array, treat it as a single value
+    const formattedValue = this.formatValue(value);
+    return `${column} = ${formattedValue}`;
   }
 
   private mapOperator(operator: string): string {
