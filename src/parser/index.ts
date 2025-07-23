@@ -293,7 +293,7 @@ export class SupabaseQueryParser {
    */
   private parseSimpleObject(objStr: string): Record<string, any> | null {
     try {
-      // Handle simple patterns like {name: 'John', email: 'john@example.com'}
+      // Handle simple patterns like {name: 'Test User', email: 'test@example.com'}
       const cleanStr = objStr.replace(/(\w+):\s*['"`]([^'"`]+)['"`]/g, '"$1": "$2"');
       return JSON.parse(cleanStr);
     } catch {

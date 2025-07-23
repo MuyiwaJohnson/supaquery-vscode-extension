@@ -567,12 +567,58 @@ export class EnhancedTranslator {
       });
     }
     
-    // Add body for POST/PATCH
+    // Add body for POST/PATCH with improved formatting
     if (httpRequest.body && (httpRequest.method === 'POST' || httpRequest.method === 'PATCH')) {
       curl += ` \\\n  -H "Content-Type: application/json"`;
-      curl += ` \\\n  -d '${JSON.stringify(httpRequest.body)}'`;
+      
+      // Format JSON body for better readability
+      const formattedBody = this.formatJsonBody(httpRequest.body);
+      curl += ` \\\n  -d '${formattedBody}'`;
     }
     
     return curl;
+  }
+
+  /**
+   * Format JSON body for cURL command with improved readability
+   */
+  private formatJsonBody(body: any): string {
+    // For arrays, format them more compactly
+    if (Array.isArray(body)) {
+      if (body.length === 0) {
+        return '[]';
+      }
+      
+      // For simple arrays, keep them on one line
+      if (body.length <= 2 && body.every(item => 
+        typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean'
+      )) {
+        return JSON.stringify(body);
+      }
+      
+      // For complex arrays (objects), format them nicely
+      return JSON.stringify(body, null, 2)
+        .replace(/\n/g, '\\n')
+        .replace(/\s{2}/g, ' ');
+    }
+    
+    // For objects, format them compactly but readably
+    if (typeof body === 'object' && body !== null) {
+      const keys = Object.keys(body);
+      if (keys.length <= 3 && keys.every(key => 
+        typeof body[key] === 'string' || typeof body[key] === 'number' || typeof body[key] === 'boolean'
+      )) {
+        // Simple objects on one line
+        return JSON.stringify(body);
+      }
+      
+      // Complex objects with better formatting
+      return JSON.stringify(body, null, 2)
+        .replace(/\n/g, '\\n')
+        .replace(/\s{2}/g, ' ');
+    }
+    
+    // For primitive values, use standard JSON.stringify
+    return JSON.stringify(body);
   }
 } 

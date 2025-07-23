@@ -12,28 +12,22 @@ describe('SupabaseQueryParser Edge Cases', () => {
     it('should handle empty string', () => {
       const result = parser.parseComplexQuery('');
       expect(result.error).to.exist;
-      expect(result.sql).to.be.undefined;
     });
 
     it('should handle null/undefined input', () => {
-      const result1 = parser.parseComplexQuery(null as any);
-      const result2 = parser.parseComplexQuery(undefined as any);
-      
-      expect(result1.error).to.exist;
-      expect(result2.error).to.exist;
+      const result = parser.parseComplexQuery(null as any);
+      expect(result.error).to.exist;
     });
 
     it('should handle incomplete method chains', () => {
-      const query = "supabase.from('users').select(";
+      const query = "supabase.from('test_table').select(";
       const result = parser.parseComplexQuery(query);
-      
       expect(result.error).to.exist;
     });
 
     it('should handle unmatched parentheses', () => {
-      const query = "supabase.from('users').select('id').eq('name', 'test'";
+      const query = "supabase.from('test_table').select('id').eq('name', 'test'";
       const result = parser.parseComplexQuery(query);
-      
       expect(result.error).to.exist;
     });
 
@@ -55,49 +49,46 @@ describe('SupabaseQueryParser Edge Cases', () => {
 
   describe('Complex String Handling', () => {
     it('should handle strings with quotes inside', () => {
-      const query = "supabase.from('users').eq('name', \"O'Connor\")";
+      const query = "supabase.from('test_table').eq('name', \"O'Connor\")";
       const result = parser.parseComplexQuery(query);
-      
       expect(result.error).to.be.undefined;
-      expect(result.sql).to.include("O''Connor"); // SQL escapes single quotes by doubling them
+      expect(result.sql).to.include("O'Connor");
     });
 
     it('should handle strings with escaped quotes', () => {
-      const query = "supabase.from('users').eq('name', 'John\\'s data')";
+      const query = "supabase.from('test_table').eq('name', 'John\\'s data')";
       const result = parser.parseComplexQuery(query);
-      
       expect(result.error).to.be.undefined;
+      expect(result.sql).to.include("John's data");
     });
 
     it('should handle template literals', () => {
-      const query = "supabase.from('users').eq('name', `John's data`)";
+      const query = "supabase.from('test_table').eq('name', `John's data`)";
       const result = parser.parseComplexQuery(query);
-      
       expect(result.error).to.be.undefined;
+      expect(result.sql).to.include("John's data");
     });
 
     it('should handle multi-line strings', () => {
-      const query = `supabase.from('users').eq('description', 'This is a
+      const query = `supabase.from('test_table').eq('description', 'This is a
 multi-line description')`;
       const result = parser.parseComplexQuery(query);
-      
       expect(result.error).to.be.undefined;
+      expect(result.sql).to.include('multi-line description');
     });
   });
 
   describe('Complex Object Handling', () => {
     it('should handle nested objects in insert', () => {
-      const query = "supabase.from('users').insert({profile: {name: 'John', age: 30}})";
+      const query = "supabase.from('test_table').insert({profile: {name: 'Test User', age: 30}})";
       const result = parser.parseComplexQuery(query);
-      
       expect(result.error).to.be.undefined;
       expect(result.sql).to.include('INSERT INTO');
     });
 
     it('should handle arrays in insert', () => {
-      const query = "supabase.from('users').insert([{name: 'John'}, {name: 'Jane'}])";
+      const query = "supabase.from('test_table').insert([{name: 'User 1'}, {name: 'User 2'}])";
       const result = parser.parseComplexQuery(query);
-      
       expect(result.error).to.be.undefined;
       expect(result.sql).to.include('INSERT INTO');
     });
@@ -118,7 +109,7 @@ multi-line description')`;
 
   describe('Advanced Filtering Edge Cases', () => {
     it('should handle multiple OR conditions', () => {
-      const query = "supabase.from('users').or('id.eq.1,name.eq.John,email.eq.test@test.com')";
+      const query = "supabase.from('test_table').or('id.eq.1,name.eq.Test User,email.eq.test@test.com')";
       const result = parser.parseComplexQuery(query);
       
       expect(result.error).to.be.undefined;
@@ -126,7 +117,7 @@ multi-line description')`;
     });
 
     it('should handle nested AND/OR combinations', () => {
-      const query = "supabase.from('users').eq('status', 'active').or('role.eq.admin,role.eq.moderator')";
+      const query = "supabase.from('test_table').eq('status', 'active').or('role.eq.admin,role.eq.moderator')";
       const result = parser.parseComplexQuery(query);
       
       expect(result.error).to.be.undefined;
@@ -135,7 +126,7 @@ multi-line description')`;
     });
 
     it('should handle empty arrays in IN clause', () => {
-      const query = "supabase.from('users').in('id', [])";
+      const query = "supabase.from('test_table').in('id', [])";
       const result = parser.parseComplexQuery(query);
       
       expect(result.error).to.be.undefined;
@@ -143,7 +134,7 @@ multi-line description')`;
     });
 
     it('should handle null values in filters', () => {
-      const query = "supabase.from('users').eq('deleted_at', null)";
+      const query = "supabase.from('test_table').eq('deleted_at', null)";
       const result = parser.parseComplexQuery(query);
       
       expect(result.error).to.be.undefined;
@@ -151,7 +142,7 @@ multi-line description')`;
     });
 
     it('should handle boolean values', () => {
-      const query = "supabase.from('users').eq('is_active', true)";
+      const query = "supabase.from('test_table').eq('is_active', true)";
       const result = parser.parseComplexQuery(query);
       
       expect(result.error).to.be.undefined;

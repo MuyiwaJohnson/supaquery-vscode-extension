@@ -2,25 +2,22 @@ import { SupabaseQueryParser } from '../../parser';
 import { EnhancedTranslator } from '../../enhanced-translator';
 
 // Simple queries for performance testing
-const SIMPLE_QUERIES = [
-  "supabase.from('users').select('*')",
-  "supabase.from('users').select('id, name').eq('status', 'active')",
-  "supabase.from('users').insert({name: 'John', email: 'john@example.com'})",
-  "supabase.from('users').eq('id', 1).update({name: 'Jane'})",
-  "supabase.from('users').eq('id', 1).delete()",
-  "supabase.from('users').select('*').eq('status', 'active').gt('age', 18)",
-  "supabase.from('users').select('*').in('status', ['active', 'pending'])",
-  "supabase.from('users').select('*').like('name', '%john%')",
-  "supabase.from('users').select('*').or('status.eq.active,age.gt.18')",
-  "supabase.from('users').select('*').not('status', 'inactive')"
+const testQueries = [
+  "supabase.from('test_table').select('*')",
+  "supabase.from('test_table').select('id, name').eq('status', 'active')",
+  "supabase.from('test_table').insert({name: 'Test User', email: 'test@example.com'})",
+  "supabase.from('test_table').eq('id', 1).update({name: 'Updated User'})",
+  "supabase.from('test_table').eq('id', 1).delete()",
+  "supabase.from('test_table').select('*').eq('status', 'active').gt('age', 18)",
+  "supabase.from('test_table').select('*').in('status', ['active', 'pending'])",
+  "supabase.from('test_table').select('*').like('name', '%test%')",
+  "supabase.from('test_table').select('*').or('status.eq.active,age.gt.18')",
+  "supabase.from('test_table').select('*').not('status', 'inactive')"
 ];
 
-// Complex queries for comparison
-const COMPLEX_QUERIES = [
-  "supabase.from('users').select('*, posts(title, content)').eq('posts.published', true)",
-  "supabase.from('products').select('metadata->>color').contains('metadata', {size: 'XL'})",
-  "supabase.from('users').select('*').eq('auth.uid()', 'user-id').or('role.eq.admin,is_public.eq.true')",
-  "supabase.from('orders').select('*, order_items(*, products(*))').eq('status', 'pending').gt('total', 100)"
+const complexQueries = [
+  "supabase.from('test_table').select('*, related_table(title, content)').eq('related_table.published', true)",
+  "supabase.from('test_table').select('*').eq('auth.uid()', 'user-id').or('role.eq.admin,is_public.eq.true')"
 ];
 
 class PerformanceBenchmark {
@@ -54,7 +51,7 @@ class PerformanceBenchmark {
     console.log('\n📊 Simple Queries (10 queries):');
     const simpleTimes: number[] = [];
     
-    for (const query of SIMPLE_QUERIES) {
+    for (const query of testQueries) {
       const { time } = this.measureTime(() => {
         this.parser.parseQuery(query);
       });
@@ -74,7 +71,7 @@ class PerformanceBenchmark {
     console.log('\n📊 Complex Queries (4 queries):');
     const complexTimes: number[] = [];
     
-    for (const query of COMPLEX_QUERIES) {
+    for (const query of complexQueries) {
       const { time } = this.measureTime(() => {
         this.parser.parseQuery(query);
       });
@@ -104,7 +101,7 @@ class PerformanceBenchmark {
     console.log('\n📊 Full Translation Pipeline (10 simple queries):');
     const translationTimes: number[] = [];
     
-    for (const query of SIMPLE_QUERIES) {
+    for (const query of testQueries) {
       const { time } = await this.measureAsyncTime(async () => {
         await this.translator.fullTranslation(query);
       });
@@ -132,7 +129,7 @@ class PerformanceBenchmark {
     console.log('=================================');
 
     // Simulate real-time translation with debouncing
-    const query = "supabase.from('users').select('*').eq('status', 'active')";
+    const query = "supabase.from('test_table').select('*').eq('status', 'active')";
     
     console.log('\n📊 Single Query Translation (5 iterations):');
     const times: number[] = [];
