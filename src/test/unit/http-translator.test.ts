@@ -195,8 +195,11 @@ describe('Custom HTTP Translator Tests', () => {
       expect(result.http).to.exist;
       const curl = translator.generateCurl(result.http!);
       
-      expect(curl).to.include('curl -G');
+      expect(curl).to.include('curl \'');
       expect(curl).to.include('/users');
+      expect(curl).to.include('[YOUR SUPABASE PROJECT URL]/rest/v1');
+      expect(curl).to.include('apikey: SUPABASE_CLIENT_ANON_KEY');
+      expect(curl).to.include('Authorization: Bearer SUPABASE_CLIENT_ANON_KEY');
     });
 
     it('should generate cURL for POST request', async () => {
@@ -209,6 +212,9 @@ describe('Custom HTTP Translator Tests', () => {
       expect(curl).to.include('curl -X POST');
       expect(curl).to.include('Content-Type: application/json');
       expect(curl).to.include('{"name":"John"}');
+      expect(curl).to.include('[YOUR SUPABASE PROJECT URL]/rest/v1');
+      expect(curl).to.include('apikey: SUPABASE_CLIENT_ANON_KEY');
+      expect(curl).to.include('Authorization: Bearer SUPABASE_CLIENT_ANON_KEY');
     });
 
     it('should generate cURL for PATCH request', async () => {
@@ -221,6 +227,9 @@ describe('Custom HTTP Translator Tests', () => {
       expect(curl).to.include('curl -X PATCH');
       expect(curl).to.include('Content-Type: application/json');
       expect(curl).to.include('{"name":"Jane"}');
+      expect(curl).to.include('[YOUR SUPABASE PROJECT URL]/rest/v1');
+      expect(curl).to.include('apikey: SUPABASE_CLIENT_ANON_KEY');
+      expect(curl).to.include('Authorization: Bearer SUPABASE_CLIENT_ANON_KEY');
     });
 
     it('should generate cURL for DELETE request', async () => {
@@ -233,6 +242,9 @@ describe('Custom HTTP Translator Tests', () => {
       const curl = translator.generateCurl(result.http!);
       expect(curl).to.include('curl -X DELETE');
       expect(curl).to.include('id=eq.1');
+      expect(curl).to.include('[YOUR SUPABASE PROJECT URL]/rest/v1');
+      expect(curl).to.include('apikey: SUPABASE_CLIENT_ANON_KEY');
+      expect(curl).to.include('Authorization: Bearer SUPABASE_CLIENT_ANON_KEY');
     });
 
     it('should generate cURL with Accept header for .single() queries', async () => {
@@ -243,9 +255,12 @@ describe('Custom HTTP Translator Tests', () => {
       expect(result.http).to.exist;
       
       const curl = translator.generateCurl(result.http!);
-      expect(curl).to.include('curl -G');
+      expect(curl).to.include('curl \'');
       expect(curl).to.include('Accept: application/vnd.pgrest.object+json');
       expect(curl).to.include('id=eq.123');
+      expect(curl).to.include('[YOUR SUPABASE PROJECT URL]/rest/v1');
+      expect(curl).to.include('apikey: SUPABASE_CLIENT_ANON_KEY');
+      expect(curl).to.include('Authorization: Bearer SUPABASE_CLIENT_ANON_KEY');
       // Should NOT include limit=1
       expect(curl).to.not.include('limit=1');
     });

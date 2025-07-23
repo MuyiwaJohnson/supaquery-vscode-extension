@@ -540,17 +540,30 @@ export class EnhancedTranslator {
   private generateCurl(httpRequest: UnifiedHttpRequest): string {
     let curl: string;
     
+    // Replace localhost URL with placeholder for real Supabase URL
+    const realSupabaseUrl = httpRequest.fullPath.replace(
+      'http://localhost:54321/rest/v1',
+      '[YOUR SUPABASE PROJECT URL]/rest/v1'
+    );
+    
     if (httpRequest.method === 'GET') {
       // Use -G for GET requests (this is the standard for query parameters)
-      curl = `curl -G "${httpRequest.fullPath}"`;
+      curl = `curl '${realSupabaseUrl}'`;
     } else {
-      curl = `curl -X ${httpRequest.method} "${httpRequest.fullPath}"`;
+      curl = `curl -X ${httpRequest.method} '${realSupabaseUrl}'`;
     }
     
-    // Add headers
+    // Add Supabase authentication headers
+    curl += ` \\\n  -H "apikey: SUPABASE_CLIENT_ANON_KEY"`;
+    curl += ` \\\n  -H "Authorization: Bearer SUPABASE_CLIENT_ANON_KEY"`;
+    
+    // Add other headers
     if (httpRequest.headers) {
       httpRequest.headers.forEach((value, key) => {
-        curl += ` \\\n  -H "${key}: ${value}"`;
+        // Skip Content-Type if we're adding it for body
+        if (key.toLowerCase() !== 'content-type') {
+          curl += ` \\\n  -H "${key}: ${value}"`;
+        }
       });
     }
     

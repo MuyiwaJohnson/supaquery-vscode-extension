@@ -40,8 +40,11 @@ describe('Enhanced Translator Integration Tests', () => {
       
       expect(result.error).to.be.undefined;
       expect(result.curl).to.exist;
-      expect(result.curl!).to.include('curl -G');
+      expect(result.curl!).to.include('curl \'');
       expect(result.curl!).to.include('/users');
+      expect(result.curl!).to.include('[YOUR SUPABASE PROJECT URL]/rest/v1');
+      expect(result.curl!).to.include('apikey: SUPABASE_CLIENT_ANON_KEY');
+      expect(result.curl!).to.include('Authorization: Bearer SUPABASE_CLIENT_ANON_KEY');
       // The cURL will include the full URL with query parameters
       expect(result.curl!).to.include('rest/v1/users');
     });
@@ -79,8 +82,11 @@ describe('Enhanced Translator Integration Tests', () => {
       expect(result.http!.path).to.equal('/books');
       
       // Verify cURL contains expected elements
-      expect(result.curl!).to.include('curl -G');
+      expect(result.curl!).to.include('curl \'');
       expect(result.curl!).to.include('/books');
+      expect(result.curl!).to.include('[YOUR SUPABASE PROJECT URL]/rest/v1');
+      expect(result.curl!).to.include('apikey: SUPABASE_CLIENT_ANON_KEY');
+      expect(result.curl!).to.include('Authorization: Bearer SUPABASE_CLIENT_ANON_KEY');
       
       // Verify round-trip Supabase JS
       expect(result.supabaseJs!).to.include('Generated from SQL');

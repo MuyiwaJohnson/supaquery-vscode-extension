@@ -64,7 +64,10 @@ describe('EnhancedTranslator CRUD Operations', () => {
       expect(result.sql).to.include('SELECT');
       expect(result.http).to.exist;
       expect(result.http!.method).to.equal('GET');
-      expect(result.curl).to.include('curl -G');
+      expect(result.curl).to.include('curl \'');
+      expect(result.curl).to.include('[YOUR SUPABASE PROJECT URL]/rest/v1');
+      expect(result.curl).to.include('apikey: SUPABASE_CLIENT_ANON_KEY');
+      expect(result.curl).to.include('Authorization: Bearer SUPABASE_CLIENT_ANON_KEY');
       // SELECT queries should have Supabase JS generation
       expect(result.supabaseJs).to.not.be.undefined;
       expect(result.supabaseJs).to.not.be.null;
