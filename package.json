@@ -1,8 +1,10 @@
 {
   "name": "supaquery",
   "displayName": "SupaQuery",
-  "description": "Translate Supabase JavaScript queries to SQL, HTTP, and cURL in real-time",
+  "description": "Translate Supabase JavaScript queries to SQL, HTTP, and cURL in real-time. Perfect for developers working with Supabase who need to understand and debug their queries.",
   "version": "0.1.0",
+  "publisher": "muyiwajohnson",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/MuyiwaJohnson/supaquery-vscode-extension.git"
@@ -11,11 +13,30 @@
     "vscode": "^1.74.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Programming Languages",
+    "Snippets"
   ],
+  "keywords": [
+    "supabase",
+    "sql",
+    "http",
+    "curl",
+    "query",
+    "translation",
+    "database",
+    "postgresql",
+    "javascript",
+    "typescript",
+    "developer-tools",
+    "debugging",
+    "api",
+    "rest",
+    "postgrest"
+  ],
+  "icon": "media/icon.png",
   "activationEvents": [
-    "onLanguage:javascript",
-    "onLanguage:typescript"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -29,8 +50,8 @@
     "keybindings": [
       {
         "command": "supaquery.translateQuery",
-        "key": "ctrl+shift+t",
-        "mac": "cmd+shift+t"
+        "key": "ctrl+shift+q",
+        "mac": "cmd+shift+q"
       }
     ],
     "menus": {
@@ -47,7 +68,7 @@
         {
           "id": "supaquery",
           "title": "SupaQuery",
-          "icon": "media/icon.svg"
+          "icon": "media/icon.png"
         }
       ]
     },
@@ -70,7 +91,7 @@
     "test": "node ./out/test/runTest.js",
     "test:unit": "mocha --require ts-node/register 'src/test/unit/**/*.test.ts'",
     "test:integration": "node ./out/test/runTest.js",
-    "test:all": "npm run test:unit && npm run test:integration",
+    "test:all": "npm run test:unit && npm run integration",
     "benchmark": "ts-node src/test/performance/benchmark.ts"
   },
   "devDependencies": {
