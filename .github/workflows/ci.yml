@@ -61,7 +61,7 @@ jobs:
       run: npx vsce package --no-yarn
 
     - name: Upload extension artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: supaquery-extension
         path: supaquery-*.vsix 
